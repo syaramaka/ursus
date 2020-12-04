@@ -2,7 +2,6 @@ package com.doj.ursus.impl;
 
 
 import com.doj.ursus.model.Civilians;
-import com.doj.ursus.model.User;
 import com.doj.ursus.util.Gender;
 import org.springframework.jdbc.core.RowMapper;
 

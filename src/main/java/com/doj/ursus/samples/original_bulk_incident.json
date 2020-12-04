@@ -1,0 +1,88 @@
+[
+  {
+    "screener": {
+      "multiple_agencies": "false",
+      "discharge_of_firearm": "true",
+      "officer_used_force": "true",
+      "civilian_seriously_injured_or_killed": "false",
+      "civilian_used_force": "false",
+      "officer_seriously_injured_or_killed": "false"
+    },
+    "arrest_made": "true",
+    "code": null,
+    "crime_report": "true",
+    "reason": "call_for_service",
+    "officer_count": 1,
+    "civilian_count": 1,
+    "scenario": null,
+    "occurred_on": "11/15/2018",
+    "occurred_at": "00:35",
+    "custody_event_options": null,
+    "primary_agency": "Selma Police Department",
+    "ori": "CA0101500",
+    "addresses": [
+      {
+        "order": 1,
+        "street_number": "4949",
+        "route": "Broadway",
+        "city": "Sacramento",
+        "county": "Sacramento",
+        "state": "CA",
+        "zip_code": "95820",
+        "k_12_campus": "false",
+        "location_detail": "Parking lot"
+      }
+    ],
+    "civilians": [
+      {
+        "number": 1,
+        "officer_ids": [1],
+        "arrested_or_custody": "in_custody_other",
+        "offense": "PANDERING:OTHR PERSON -16",
+        "age": "26_30",
+        "gender": "male",
+        "race_options": ["black","american_indian"],
+        "asian_options": [],
+        "hawaiian_islander_options": [],
+        "injured": "true",
+        "injury_type": ["sprain","internal_injury"],
+        "medical_aid": "precautionary_measure_only",
+        "injury_level": "injury",
+        "pre_existing_condition": "false",
+        "assaulted_officer": "false",
+        "behavior": ["drug_impairment", "developmental_disability"],
+        "resisted": "false",
+        "resistance_level": null,
+        "perceived_armed": "false",
+        "perceived_weapon_type": null,
+        "confirmed_armed": "true",
+        "confirmed_weapon_type": ["knife_blade_stabbing","firearm"],
+        "firearm_type": ["handgun"],
+        "forced": "true",
+        "force_location": ["front_below_waist","rear_upper_back"],
+        "force_type": ["k_9_contact","threat_of_firearm","discharge_of_firearm_miss"],
+        "force_order": "false"
+      }
+    ],
+    "officers": [
+      {
+        "agency": "Selma Police Department",
+        "number": 1,
+        "civilian_ids": [1],
+        "force_against_civilian": "true",
+        "reason_for_force": ["effect_arrest","prevent_escape"],
+        "age": "31_35",
+        "gender": "male",
+        "race_options": ["asian","white" ],
+        "asian_options": ["filipino","cambodian"],
+        "hawaiian_islander_options": [],
+        "injured": "false",
+        "pre_existing_condition": "false",
+        "forced": "false",
+        "force_type": null,
+        "duty": "false",
+        "dress": "plainclothes"
+      }
+    ]
+  }
+]

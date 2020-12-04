@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents type="array">
+    <incident>
+        <screener>
+            <multiple-agencies>false</multiple-agencies>
+            <discharge-of-firearm>true</discharge-of-firearm>
+            <officer-used-force>true</officer-used-force>
+            <civilian-seriously-injured-or-killed>false</civilian-seriously-injured-or-killed>
+            <civilian-used-force>false</civilian-used-force>
+            <officer-seriously-injured-or-killed>false</officer-seriously-injured-or-killed>
+        </screener>
+
+        <arrest-made>true</arrest-made>
+        <crime-report>false</crime-report>
+        <reason>call_for_service</reason>
+        <officer-count type="integer">1</officer-count>
+        <civilian-count type="integer">1</civilian-count>
+        <scenario></scenario>
+        <occurred-on>11/15/2018</occurred-on>
+        <occurred-at>16:27</occurred-at>
+        <custody-event-options></custody-event-options>
+        <primary-agency>Selma Police Department</primary-agency>
+        <ori>CA0101500</ori>
+        <code></code>
+
+        <addresses type="array">
+            <address>
+                <order type="integer">1</order>
+                <street-number>111</street-number>
+                <route>Broadway</route>
+                <city>Sacramento</city>
+                <county>Sacramento</county>
+                <state>CA</state>
+                <zip-code>95820</zip-code>
+                <k-12-campus>false</k-12-campus>
+                <location-detail>Parking lot</location-detail>
+            </address>
+        </addresses>
+
+        <civilians type="array">
+            <civilian>
+                <age>36_40</age>
+                <number type="integer">1</number>
+                <k-12-civilian-type></k-12-civilian-type>
+                <arrested-or-custody>in_custody_other</arrested-or-custody>
+                <assaulted-officer>false</assaulted-officer>
+                <behavior type="array">
+                    <behavior>drug_impairment</behavior>
+                    <behavior>developmental_disability</behavior>
+                </behavior>
+                <confirmed-armed>true</confirmed-armed>
+                <confirmed-weapon-type type="array">
+                    <confirmed-weapon-type>firearm_replica</confirmed-weapon-type>
+                    <confirmed-weapon-type>firearm</confirmed-weapon-type>
+                </confirmed-weapon-type>
+
+                <forced>true</forced>
+                <force-location type="array">
+                    <force_location>front_below_waist</force_location>
+                    <force_location>rear_upper_back</force_location>
+                </force-location>
+                <force-type type="array">
+                    <force_type>k_9_contact</force_type>
+                    <force_type>threat_of_firearm</force_type>
+                    <force_type>discharge_of_firearm_miss</force_type>
+                </force-type>
+                <force_order>false</force_order>
+                <firearm-type type="array">
+                    <firearm-type>handgun</firearm-type>
+                </firearm-type>
+                <gender>male</gender>
+                <injured>true</injured>
+                <injury-level>injury</injury-level>
+                <injury-type type="array">
+                    <injury-type>sprain</injury-type>
+                    <injury-type>internal_injury</injury-type>
+                </injury-type>
+                <medical-aid>precautionary_measure_only</medical-aid>
+                <officer-ids type="array">
+                    <officer-id type="integer">1</officer-id>
+                </officer-ids>
+                <perceived-armed>false</perceived-armed>
+                <perceived-weapon-type></perceived-weapon-type>
+                <pre-existing-condition>false</pre-existing-condition>
+                <resisted>true</resisted>
+                <resistance-level>active_resistance</resistance-level>
+                <race-options type="array">
+                    <race-option>black</race-option>
+                    <race-option>american_indian</race-option>
+                </race-options>
+                <asian-options type="array">
+                    <asian-options></asian-options>
+                </asian-options>
+                <hawaiian-islander-options type="array">
+                    <hawaiian-islander-options></hawaiian-islander-options>
+                </hawaiian-islander-options>
+                <offense>PANDERING:OTHR PERSON -16</offense>
+            </civilian>
+        </civilians>
+
+        <officers type="array">
+            <officer>
+                <agency>Selma Police Department</agency>
+                <age>31_35</age>
+                <number type="integer">1</number>
+                <civilian-ids type="array">
+                    <civilian-id type="integer">1</civilian-id>
+                </civilian-ids>
+                <force-against-civilian>true</force-against-civilian>
+                <reason-for-force type="array">
+                    <reason-for-force>prevent_escape</reason-for-force>
+                    <reason-for-force>effect_arrest</reason-for-force>
+                </reason-for-force>
+                <force-location type="array">
+                    <force-location>head</force-location>
+                    <force-location>arms_hands</force-location>
+                </force-location>
+                <forced>false</forced>
+                <force-type type="array">
+                    <force-type></force-type>
+                </force-type>
+                <race-options type="array">
+                    <race-option>white</race-option>
+                </race-options>
+                <gender>male</gender>
+                <injured>false</injured>
+                <injury-level></injury-level>
+                <injury-type type="array">
+                    <injury-type></injury-type>
+                    <injury-type></injury-type>
+                </injury-type>
+                <medical-aid></medical-aid>
+                <duty>true</duty>
+                <pre-existing-condition>false</pre-existing-condition>
+                <dress>plainclothes</dress>
+            </officer>
+        </officers>
+    </incident>
+</incidents>

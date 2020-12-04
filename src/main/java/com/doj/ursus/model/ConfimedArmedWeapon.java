@@ -1,4 +1,4 @@
-package com.doj.ursus.impl;
+package com.doj.ursus.model;
 
 public class ConfimedArmedWeapon {
 

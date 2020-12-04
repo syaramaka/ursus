@@ -1,12 +1,14 @@
 package com.doj.ursus.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import java.sql.Date;
 import java.util.List;
 
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class IncidentForceType {
 
 private String forceType;
-//private Date chnageDate;
 private int forceId;
 private int forceTypeId;
 
@@ -33,14 +35,6 @@ private int forceTypeId;
     public void setForceType(String forceType) {
         this.forceType = forceType;
     }
-
-//    public Date getChnageDate() {
-//        return chnageDate;
-//    }
-//
-//    public void setChnageDate(Date chnageDate) {
-//        this.chnageDate = chnageDate;
-//    }
 
     @Override
     public String toString() {

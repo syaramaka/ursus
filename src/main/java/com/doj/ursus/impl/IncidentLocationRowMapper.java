@@ -15,7 +15,6 @@ public class IncidentLocationRowMapper implements RowMapper {
         incidentLocation.setZip(resultSet.getString("address_zip"));
         incidentLocation.setStreetName(resultSet.getString("address_street"));
         incidentLocation.setState(resultSet.getString("address_state"));
-        //incidentLocation.setLocation(resultSet.getString(""));
         incidentLocation.setLongitude(resultSet.getDouble("address_long"));
         incidentLocation.setLatitude(resultSet.getDouble("address_lat"));
         incidentLocation.setIsOnK12Campus(resultSet.getString("address_k12"));

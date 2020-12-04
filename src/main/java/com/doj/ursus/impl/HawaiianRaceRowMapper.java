@@ -12,7 +12,9 @@ public class HawaiianRaceRowMapper implements RowMapper {
         HawaiianPacificIslanderRace hawaiianPacificIslanderRace = new HawaiianPacificIslanderRace();
         hawaiianPacificIslanderRace.setHawaiianRace(resultSet.getString("hawaiian_race"));
         hawaiianPacificIslanderRace.setHawainRaceId(resultSet.getInt("hawaiian_race_id"));
-        hawaiianPacificIslanderRace.setRaceId(resultSet.getInt("race_id"));
+        hawaiianPacificIslanderRace.setCivilianId(resultSet.getInt("civilian_details_civilian_id"));
+        hawaiianPacificIslanderRace.setOfficerId(resultSet.getInt("officer_details_officer_id"));
+        hawaiianPacificIslanderRace.setHawaiianRaceOf(resultSet.getString("hawaiian_race_for"));
         return hawaiianPacificIslanderRace;
     }
 }

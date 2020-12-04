@@ -10,9 +10,11 @@ public class InjuryTypeRowMapper implements RowMapper {
     @Override
     public Object mapRow(ResultSet resultSet, int i) throws SQLException {
         InjuryType injuryType = new InjuryType();
-        injuryType.setInjuryId(resultSet.getInt("injury_id"));
         injuryType.setInjuryType(resultSet.getString("injury_type"));
         injuryType.setInjuryTypeId(resultSet.getInt("injury_type_id"));
+        injuryType.setCivilianId(resultSet.getInt("civilian_details_civilian_id"));
+        injuryType.setOfficerId(resultSet.getInt("officer_details_officer_id"));
+        injuryType.setInjutyTypeOn(resultSet.getString("injury_type_on"));
         return injuryType;
     }
 }

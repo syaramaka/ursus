@@ -7,9 +7,6 @@ this is for incident address details, map to incident_address table
  */
 public class IncidentAddressDetails {
 
-    //private int incidentAddressId;
-    //private String pimaryAgency;
-    //private List<SubOrdinateAgency> subOrdinateAgencyList;
     private List<IncidentLocation> incidentLocations;
 
     public List<IncidentLocation> getIncidentLocations() {

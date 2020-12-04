@@ -14,6 +14,8 @@ public class ScreenTestData {
         screener.setIsCivilianSeriouslyInjured("Y");
         screener.setIsCivilianUsedForce("Y");
         screener.setIsOfficerSeriouslyInjured("Y");
+        screener.setIsPrimaryAgency("N");
+        screener.setPrimaryAgencyName("SAPD");
         return screener;
     }
 }

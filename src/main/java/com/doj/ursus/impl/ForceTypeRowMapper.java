@@ -1,5 +1,6 @@
 package com.doj.ursus.impl;
 
+import com.doj.ursus.model.ForceType;
 import com.doj.ursus.model.IncidentForceType;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -10,10 +11,12 @@ public class ForceTypeRowMapper implements RowMapper {
 
     @Override
     public Object mapRow(ResultSet resultSet, int i) throws SQLException {
-        IncidentForceType incidentForceType = new IncidentForceType();
-        incidentForceType.setForceId(resultSet.getInt("force_level_force_id"));
-        incidentForceType.setForceType(resultSet.getString("force_type"));
-        incidentForceType.setForceTypeId(resultSet.getInt("force_type_id"));
-        return incidentForceType;
+        ForceType forceType = new ForceType();
+        forceType.setForceType(resultSet.getString("force_type"));
+        forceType.setForceTypeId(resultSet.getInt("force_type_id"));
+        forceType.setCivilianId(resultSet.getInt("civilian_details_civilian_id"));
+        forceType.setOfficerId(resultSet.getInt("officer_details_officer_id"));
+        forceType.setForceOn(resultSet.getString("force_type_on"));
+        return forceType;
     }
 }

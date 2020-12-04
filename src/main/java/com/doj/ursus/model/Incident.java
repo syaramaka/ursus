@@ -1,18 +1,20 @@
 package com.doj.ursus.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+import javax.xml.bind.annotation.*;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.List;
 
-public class IncidentCoreDetails {
+@XmlRootElement(name = "incident")
+@XmlAccessorType(XmlAccessType.FIELD)
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
+public class Incident {
 
+    private Screener screener;
     private int incidentId;
     private String primaryAgency;
-    /*
-    if it is multiple agencies and incident should submitted by primary agency
-    then, in incident details page subordinate agency field should enable.
-    user can add multiple subordinate agencies by clicking "Add Subordinate Agency" button
-     */
     private List<SubOrdinateAgency> subOrdinateAgencyList;
     private Date incidentDate;
     private Timestamp incidentTime;
@@ -26,8 +28,18 @@ public class IncidentCoreDetails {
     private String caseNumber;
     private String custodyEventOptions;
 
-    private IncidentAddressDetails incidentAddressDetails;
-    private IncidentDemographics incidentDemographics;
+    @XmlElementWrapper(name = "addresses")
+    @XmlElement(name="address")
+    private List<Address> addresses;
+
+    @XmlElementWrapper(name="civilians")
+    @XmlElement(name="civilian")
+    private List<Civilians> civilians;
+
+    @XmlElementWrapper(name="officers")
+    @XmlElement(name="officer")
+    private List<Officers> officers;
+
 
     public int getIncidentId() {
         return incidentId;
@@ -141,26 +153,43 @@ public class IncidentCoreDetails {
         this.custodyEventOptions = custodyEventOptions;
     }
 
-    public IncidentAddressDetails getIncidentAddressDetails() {
-        return incidentAddressDetails;
+    public List<Address> getAddresses() {
+        return addresses;
     }
 
-    public void setIncidentAddressDetails(IncidentAddressDetails incidentAddressDetails) {
-        this.incidentAddressDetails = incidentAddressDetails;
+    public void setAddresses(List<Address> addresses) {
+        this.addresses = addresses;
     }
 
-    public IncidentDemographics getIncidentDemographics() {
-        return incidentDemographics;
+    public List<Civilians> getCivilians() {
+        return civilians;
     }
 
-    public void setIncidentDemographics(IncidentDemographics incidentDemographics) {
-        this.incidentDemographics = incidentDemographics;
+    public void setCivilians(List<Civilians> civilians) {
+        this.civilians = civilians;
+    }
+
+    public List<Officers> getOfficers() {
+        return officers;
+    }
+
+    public void setOfficers(List<Officers> officers) {
+        this.officers = officers;
+    }
+
+    public Screener getScreener() {
+        return screener;
+    }
+
+    public void setScreener(Screener screener) {
+        this.screener = screener;
     }
 
     @Override
     public String toString() {
-        return "IncidentCoreDetails{" +
-                "incidentId='" + incidentId + '\'' +
+        return "Incident{" +
+                "screener=" + screener +
+                ", incidentId=" + incidentId +
                 ", primaryAgency='" + primaryAgency + '\'' +
                 ", subOrdinateAgencyList=" + subOrdinateAgencyList +
                 ", incidentDate=" + incidentDate +
@@ -174,8 +203,9 @@ public class IncidentCoreDetails {
                 ", scenario='" + scenario + '\'' +
                 ", caseNumber='" + caseNumber + '\'' +
                 ", custodyEventOptions='" + custodyEventOptions + '\'' +
-                ", incidentAddressDetails=" + incidentAddressDetails +
-                ", incidentDemographics=" + incidentDemographics +
+                ", addresses=" + addresses +
+                ", civilians=" + civilians +
+                ", officers=" + officers +
                 '}';
     }
 }

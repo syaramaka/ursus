@@ -1,10 +1,16 @@
 package com.doj.ursus.model;
 
 import com.doj.ursus.util.Gender;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
+import javax.xml.bind.annotation.*;
 import java.sql.Date;
 import java.util.List;
 
+@XmlRootElement(name = "civilian")
+@XmlAccessorType(XmlAccessType.FIELD)
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class Civilians {
 
     private int civilianId;
@@ -13,31 +19,121 @@ public class Civilians {
     private boolean isAssaultedOfficer;
     private String custodyStatus;
     private boolean isPerceivedArmed;
+    @XmlElementWrapper(name = "perceivedWeaponTypes")
+    @XmlElement(name = "perceivedWeaponType")
     private List<String> perceivedWeaponType;
+    @XmlElementWrapper(name = "engagedOfficers")
+    @XmlElement(name = "engagedOfficers")
     private List<Integer> engagedOfficers;
-    //private List<Integer> involvedOfficerIds;
     private String k12Type;
     private boolean isConfirmedArmed;
+    @XmlElementWrapper(name = "confirmedArmedWeapons")
+    @XmlElement(name = "confirmedArmedWeapon")
     private List<String> confirmedArmedWeapon;
-   // private List<FireArm> fireArms;
+   @XmlElementWrapper(name = "fireArms")
+   @XmlElement(name = "fireArms")
     List<String> fireArms;
     private boolean isResisted;
+    @XmlElementWrapper(name = "resistanceTypes")
+    @XmlElement(name = "resistanceType")
     private List<String> resistanceType;
     private boolean isReceivedForce;
-    private ForceDetails forceDetails;
     private boolean isOrderOfForceSpecified;
-    //orderOfForceString
     private String mentalStatus; // behaviour
     private boolean isInjured;
-    private Injury injuryDetails;
     private boolean isInjuryFromPreExisting;
     private int age;
     private Gender gender;
     private String race;
-    private Race raceDetails;
     private String highestCharge; // charge-type in table -- need to confirm with Jay
     private Date changeDate;
+    @JsonIgnore
     private int incidentId;
+    @XmlElementWrapper(name = "forceLocations")
+    @XmlElement(name = "forceLocation")
+    private List<String> forceLocation;
+    @XmlElementWrapper(name = "forceTypes")
+    @XmlElement(name = "forceType")
+    private List<String> forceType;
+    private int injuryLevel;
+    @XmlElementWrapper(name = "injuryTypes")
+    @XmlElement(name = "injuryType")
+    private List<String> injuryType;
+    private String injuryMedicalAid;
+    @XmlElementWrapper(name = "primaryRaceTypes")
+    @XmlElement(name = "primaryRaceType")
+    private List<String> primaryRaceType;
+    @XmlElementWrapper(name = "asianRaceTypes")
+    @XmlElement(name = "asianRaceType")
+    private List<String> asianRaceType;
+    @XmlElementWrapper(name = "hawaiianRaceTypes")
+    @XmlElement(name = "hawaiianRaceType")
+    private List<String> hawaiianRaceType;
+
+
+    public List<String> getPrimaryRaceType() {
+        return primaryRaceType;
+    }
+
+    public void setPrimaryRaceType(List<String> primaryRaceType) {
+        this.primaryRaceType = primaryRaceType;
+    }
+
+    public List<String> getAsianRaceType() {
+        return asianRaceType;
+    }
+
+    public void setAsianRaceType(List<String> asianRaceType) {
+        this.asianRaceType = asianRaceType;
+    }
+
+    public List<String> getHawaiianRaceType() {
+        return hawaiianRaceType;
+    }
+
+    public void setHawaiianRaceType(List<String> hawaiianRaceType) {
+        this.hawaiianRaceType = hawaiianRaceType;
+    }
+
+    public List<String> getForceLocation() {
+        return forceLocation;
+    }
+
+    public void setForceLocation(List<String> forceLocation) {
+        this.forceLocation = forceLocation;
+    }
+
+    public List<String> getForceType() {
+        return forceType;
+    }
+
+    public void setForceType(List<String> forceType) {
+        this.forceType = forceType;
+    }
+
+    public int getInjuryLevel() {
+        return injuryLevel;
+    }
+
+    public void setInjuryLevel(int injuryLevel) {
+        this.injuryLevel = injuryLevel;
+    }
+
+    public List<String> getInjuryType() {
+        return injuryType;
+    }
+
+    public void setInjuryType(List<String> injuryType) {
+        this.injuryType = injuryType;
+    }
+
+    public String getInjuryMedicalAid() {
+        return injuryMedicalAid;
+    }
+
+    public void setInjuryMedicalAid(String injuryMedicalAid) {
+        this.injuryMedicalAid = injuryMedicalAid;
+    }
 
     public List<Integer> getEngagedOfficers() {
         return engagedOfficers;
@@ -166,15 +262,6 @@ public class Civilians {
         isReceivedForce = receivedForce;
     }
 
-
-    public ForceDetails getForceDetails() {
-        return forceDetails;
-    }
-
-    public void setForceDetails(ForceDetails forceDetails) {
-        this.forceDetails = forceDetails;
-    }
-
     public boolean isOrderOfForceSpecified() {
         return isOrderOfForceSpecified;
     }
@@ -199,14 +286,6 @@ public class Civilians {
         isInjured = injured;
     }
 
-    public Injury getInjuryDetails() {
-        return injuryDetails;
-    }
-
-    public void setInjuryDetails(Injury injuryDetails) {
-        this.injuryDetails = injuryDetails;
-    }
-
     public boolean isInjuryFromPreExisting() {
         return isInjuryFromPreExisting;
     }
@@ -229,14 +308,6 @@ public class Civilians {
 
     public void setGender(Gender gender) {
         this.gender = gender;
-    }
-
-    public Race getRaceDetails() {
-        return raceDetails;
-    }
-
-    public void setRaceDetails(Race raceDetails) {
-        this.raceDetails = raceDetails;
     }
 
     public String getHighestCharge() {
@@ -272,19 +343,25 @@ public class Civilians {
                 ", isResisted=" + isResisted +
                 ", resistanceType=" + resistanceType +
                 ", isReceivedForce=" + isReceivedForce +
-                ", forceDetails=" + forceDetails +
                 ", isOrderOfForceSpecified=" + isOrderOfForceSpecified +
                 ", mentalStatus='" + mentalStatus + '\'' +
                 ", isInjured=" + isInjured +
-                ", injuryDetails=" + injuryDetails +
                 ", isInjuryFromPreExisting=" + isInjuryFromPreExisting +
                 ", age=" + age +
                 ", gender=" + gender +
                 ", race='" + race + '\'' +
-                ", raceDetails=" + raceDetails +
                 ", highestCharge='" + highestCharge + '\'' +
                 ", changeDate=" + changeDate +
                 ", incidentId=" + incidentId +
+                ", forceLocation=" + forceLocation +
+                ", forceType=" + forceType +
+                ", injuryLevel=" + injuryLevel +
+                ", injuryType=" + injuryType +
+                ", injuryMedicalAid='" + injuryMedicalAid + '\'' +
+                ", primaryRaceType=" + primaryRaceType +
+                ", asianRaceType=" + asianRaceType +
+                ", hawaiianRaceType=" + hawaiianRaceType +
                 '}';
     }
+
 }

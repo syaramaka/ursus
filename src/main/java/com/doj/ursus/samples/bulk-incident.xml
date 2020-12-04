@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<incidents>
+    <incident>
+        <screener>
+            <isCivilianSeriouslyInjured>Y</isCivilianSeriouslyInjured>
+            <isCivilianUsedForce>Y</isCivilianUsedForce>
+            <isDischargeOfFirearm>Y</isDischargeOfFirearm>
+            <isMultipleAgencies>Y</isMultipleAgencies>
+            <isOfficerSeriouslyInjured>Y</isOfficerSeriouslyInjured>
+            <isOfficerUsedForce>Y</isOfficerUsedForce>
+            <isPrimaryAgency>N</isPrimaryAgency>
+            <primaryAgencyName>SAPD</primaryAgencyName>
+            <screenerId>0</screenerId>
+        </screener>
+        <incidentId>0</incidentId>
+        <primaryAgency>DOJ</primaryAgency>
+        <isArrestMade>Y</isArrestMade>
+        <isCrimeReportFiled>Y</isCrimeReportFiled>
+        <incidentReason>Local Fight</incidentReason>
+        <agencyORI>CA384000</agencyORI>
+        <officersCount>2</officersCount>
+        <civiliansCount>4</civiliansCount>
+        <scenario>local fight..two offiers, 4 civilains</scenario>
+        <caseNumber>1234567</caseNumber>
+        <custodyEventOptions>Booked-No Charge filed</custodyEventOptions>
+        <addresses>
+            <address>
+                <incidentAddressSequence>1</incidentAddressSequence>
+                <isOnK12Campus>Y</isOnK12Campus>
+                <streetNo>4500</streetNo>
+                <streetName>Truxel Rd</streetName>
+                <city>Sacramento</city>
+                <state>CA</state>
+                <county>Natomas</county>
+                <zip>95834</zip>
+                <longitude>-121.4944</longitude>
+                <latitude>38.581573</latitude>
+                <locationDetails>4500 Truxel Rd</locationDetails>
+                <incidentId>0</incidentId>
+                <locationId>0</locationId>
+            </address>
+            <address>
+                <incidentAddressSequence>2</incidentAddressSequence>
+                <isOnK12Campus>Y</isOnK12Campus>
+                <streetNo>4500</streetNo>
+                <streetName>Sanator Ave</streetName>
+                <city>Sacramento</city>
+                <state>CA</state>
+                <county>Northgate Blvd</county>
+                <zip>95833</zip>
+                <longitude>-121.4944</longitude>
+                <latitude>38.581573</latitude>
+                <locationDetails>466, Sanator Ave</locationDetails>
+                <incidentId>0</incidentId>
+                <locationId>0</locationId>
+            </address>
+        </addresses>
+        <civilians>
+            <civilian>
+                <civilianId>0</civilianId>
+                <civilianNumber>1</civilianNumber>
+                <isAssaultedOfficer>true</isAssaultedOfficer>
+                <custodyStatus> In Custody (WI 5150)</custodyStatus>
+                <isPerceivedArmed>true</isPerceivedArmed>
+                <perceivedWeaponTypes>
+                    <perceivedWeaponType>Other Dangerous weapon</perceivedWeaponType>
+                    <perceivedWeaponType>Unknown</perceivedWeaponType>
+                </perceivedWeaponTypes>
+                <engagedOfficers>
+                    <engagedOfficers>1</engagedOfficers>
+                </engagedOfficers>
+                <k12Type>Student</k12Type>
+                <isConfirmedArmed>false</isConfirmedArmed>
+                <confirmedArmedWeapons>
+                    <confirmedArmedWeapon>Firearm</confirmedArmedWeapon>
+                    <confirmedArmedWeapon>Knife Blade Stabbing</confirmedArmedWeapon>
+                </confirmedArmedWeapons>
+                <fireArms>
+                    <fireArms>Shotgun</fireArms>
+                    <fireArms>Knife</fireArms>
+                </fireArms>
+                <isResisted>false</isResisted>
+                <resistanceTypes>
+                    <resistanceType> Assaultive</resistanceType>
+                    <resistanceType>Fleeing</resistanceType>
+                </resistanceTypes>
+                <isReceivedForce>false</isReceivedForce>
+                <isOrderOfForceSpecified>true</isOrderOfForceSpecified>
+                <mentalStatus>Signs of drug impairment </mentalStatus>
+                <isInjured>true</isInjured>
+                <isInjuryFromPreExisting>false</isInjuryFromPreExisting>
+                <age>36</age>
+                <gender>Male</gender>
+                <race>American-Indian</race>
+                <highestCharge>TEST Punishment</highestCharge>
+                <incidentId>0</incidentId>
+                <forceLocations>
+                    <forceLocation>Head</forceLocation>
+                    <forceLocation>Arms/hands</forceLocation>
+                </forceLocations>
+                <forceTypes>
+                    <forceType>Impact projectile</forceType>
+                    <forceType>Threat of firearm</forceType>
+                </forceTypes>
+                <injuryLevel>1</injuryLevel>
+                <injuryTypes>
+                    <injuryType>Unconscious</injuryType>
+                    <injuryType>Internal injury</injuryType>
+                </injuryTypes>
+                <injuryMedicalAid>2</injuryMedicalAid>
+                <primaryRaceTypes>
+                    <primaryRaceType>black</primaryRaceType>
+                    <primaryRaceType>american_indian</primaryRaceType>
+                </primaryRaceTypes>
+            </civilian>
+            <civilian>
+                <civilianId>0</civilianId>
+                <civilianNumber>2</civilianNumber>
+                <isAssaultedOfficer>true</isAssaultedOfficer>
+                <custodyStatus> In Custody (WI 5150)</custodyStatus>
+                <isPerceivedArmed>true</isPerceivedArmed>
+                <perceivedWeaponTypes>
+                    <perceivedWeaponType>Knife Blade Stabbing</perceivedWeaponType>
+                    <perceivedWeaponType>Firearm</perceivedWeaponType>
+                </perceivedWeaponTypes>
+                <engagedOfficers>
+                    <engagedOfficers>2</engagedOfficers>
+                </engagedOfficers>
+                <k12Type>Student</k12Type>
+                <isConfirmedArmed>true</isConfirmedArmed>
+                <confirmedArmedWeapons>
+                    <confirmedArmedWeapon>Firearm</confirmedArmedWeapon>
+                    <confirmedArmedWeapon>Other Dangerous weapon</confirmedArmedWeapon>
+                </confirmedArmedWeapons>
+                <fireArms>
+                    <fireArms>Rifle</fireArms>
+                    <fireArms>Handgun</fireArms>
+                </fireArms>
+                <isResisted>false</isResisted>
+                <resistanceTypes>
+                    <resistanceType> Active resistance</resistanceType>
+                    <resistanceType> Life-threatening </resistanceType>
+                </resistanceTypes>
+                <isReceivedForce>false</isReceivedForce>
+                <isOrderOfForceSpecified>true</isOrderOfForceSpecified>
+                <mentalStatus>Signs of drug impairment </mentalStatus>
+                <isInjured>true</isInjured>
+                <isInjuryFromPreExisting>false</isInjuryFromPreExisting>
+                <age>36</age>
+                <gender>Male</gender>
+                <race>American-Indian</race>
+                <highestCharge>TEST Punishment</highestCharge>
+                <incidentId>0</incidentId>
+                <forceLocations>
+                    <forceLocation> Rear upper torso/back</forceLocation>
+                    <forceLocation> Front lower torso/abdomen</forceLocation>
+                </forceLocations>
+                <forceTypes>
+                    <forceType> Blunt / impact weapon</forceType>
+                    <forceType> Impact projectile</forceType>
+                </forceTypes>
+                <injuryLevel>2</injuryLevel>
+                <injuryTypes>
+                    <injuryType>Abrasion/Laceration</injuryType>
+                    <injuryType>Bone fracture</injuryType>
+                </injuryTypes>
+                <injuryMedicalAid>2</injuryMedicalAid>
+                <primaryRaceTypes>
+                    <primaryRaceType>Asian</primaryRaceType>
+                    <primaryRaceType>White</primaryRaceType>
+                </primaryRaceTypes>
+                <asianRaceTypes>
+                    <asianRaceType>Filipino</asianRaceType>
+                    <asianRaceType>cambodian</asianRaceType>
+                </asianRaceTypes>
+            </civilian>
+        </civilians>
+        <officers>
+            <officer>
+                <officerId>0</officerId>
+                <agency>Police Department of Sacramento</agency>
+                <officerOrder>1</officerOrder>
+                <engagedCivilians>1</engagedCivilians>
+                <isOfficerUsedForce>true</isOfficerUsedForce>
+                <reasonForOfficerUsedForce>
+                    <reasonForOfficerUsedForce>To overcome resistance</reasonForOfficerUsedForce>
+                    <reasonForOfficerUsedForce>To prevent escape</reasonForOfficerUsedForce>
+                </reasonForOfficerUsedForce>
+                <age>35</age>
+                <gender>Male</gender>
+                <isInjured>true</isInjured>
+                <isInjuryFromPreExistingCondition>true</isInjuryFromPreExistingCondition>
+                <isReceivedForce>false</isReceivedForce>
+                <isOfficerAssaulted>true</isOfficerAssaulted>
+                <isOnDuty>true</isOnDuty>
+                <dress>Patrol Uniform</dress>
+                <incidentId>0</incidentId>
+                <primaryRaceTypes>
+                    <primaryRaceType> American Indian or Alaska Native</primaryRaceType>
+                </primaryRaceTypes>
+                <injuryLevel>1</injuryLevel>
+                <injuryTypes>
+                    <injuryType>Gunshot wound</injuryType>
+                    <injuryType>Bone fracture</injuryType>
+                </injuryTypes>
+                <injuryMedicalAid>1</injuryMedicalAid>
+                <forceLocations>
+                    <forceLocation>Arms/hands</forceLocation>
+                </forceLocations>
+                <forceTypes>
+                    <forceType>Threat of firearm</forceType>
+                </forceTypes>
+            </officer>
+            <officer>
+                <officerId>0</officerId>
+                <agency>Police Department of Natomas</agency>
+                <officerOrder>2</officerOrder>
+                <engagedCivilians>2</engagedCivilians>
+                <isOfficerUsedForce>true</isOfficerUsedForce>
+                <reasonForOfficerUsedForce>
+                    <reasonForOfficerUsedForce>Defense of third party</reasonForOfficerUsedForce>
+                    <reasonForOfficerUsedForce>To effect arrest/take into custody</reasonForOfficerUsedForce>
+                </reasonForOfficerUsedForce>
+                <age>35</age>
+                <gender>Male</gender>
+                <isInjured>false</isInjured>
+                <isInjuryFromPreExistingCondition>true</isInjuryFromPreExistingCondition>
+                <isReceivedForce>false</isReceivedForce>
+                <isOfficerAssaulted>true</isOfficerAssaulted>
+                <isOnDuty>true</isOnDuty>
+                <dress>Patrol Uniform</dress>
+                <incidentId>0</incidentId>
+                <primaryRaceTypes>
+                    <primaryRaceType>White</primaryRaceType>
+                </primaryRaceTypes>
+                <hawaiianRaceTypes>
+                    <hawaiianRaceType>Hawaiian</hawaiianRaceType>
+                </hawaiianRaceTypes>
+                <injuryLevel>1</injuryLevel>
+                <injuryTypes>
+                    <injuryType>Internal injury</injuryType>
+                </injuryTypes>
+                <injuryMedicalAid>1</injuryMedicalAid>
+            </officer>
+        </officers>
+    </incident>
+</incidents>

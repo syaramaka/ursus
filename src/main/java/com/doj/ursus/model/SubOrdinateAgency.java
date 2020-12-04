@@ -1,5 +1,8 @@
 package com.doj.ursus.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class SubOrdinateAgency {
 
     private String secondaryAgency;

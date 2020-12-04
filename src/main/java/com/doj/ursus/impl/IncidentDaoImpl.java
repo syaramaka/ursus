@@ -1,29 +1,25 @@
 package com.doj.ursus.impl;
 
 import com.doj.ursus.dao.IncidentDao;
+import com.doj.ursus.dao.ScreenerDao;
 import com.doj.ursus.model.*;
 import com.doj.ursus.util.IncidentSql;
-import org.glassfish.jersey.internal.guava.Joiner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.*;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.*;
-import java.sql.Date;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Repository
 public class IncidentDaoImpl implements IncidentDao {
@@ -36,11 +32,12 @@ public class IncidentDaoImpl implements IncidentDao {
     @Autowired
     IncidentSql incidentSql;
 
-
+    @Autowired
+    ScreenerDao screenerDao;
 
     @Override
     @Transactional
-    public IncidentCoreDetails createIncident(IncidentCoreDetails details) {
+    public Incident createIncident(Incident details) {
         KeyHolder holder = new GeneratedKeyHolder();
         jdbcTemplate.update(new PreparedStatementCreator() {
             @Override
@@ -58,7 +55,6 @@ public class IncidentDaoImpl implements IncidentDao {
                 ps.setString(10, details.getScenario());
                 ps.setString(11, details.getCaseNumber());
                 ps.setString(12, details.getCustodyEventOptions()); // need to add column in table
-                //ps.setTime(12, new java.sql.Time(new java.util.Date().getTime()));
                 return ps;
             }
         }, holder);
@@ -67,16 +63,18 @@ public class IncidentDaoImpl implements IncidentDao {
         int incidentId = (int) holder.getKeys().get("incident_id");
         logger.info("incident id:" + incidentId);
         details.setIncidentId(incidentId);
-        List<IncidentLocation> incidentLocations = details.getIncidentAddressDetails().getIncidentLocations();
-        int[] countOfIncidentLocations = submitIncidentAddress(incidentLocations, incidentId);
+
+        List<Address> addresses = details.getAddresses();
+        int[] countOfIncidentLocations = submitIncidentAddress(addresses, incidentId);
         logger.info("total locations inserted in table :" + countOfIncidentLocations.length);
-        IncidentDemographics incidentDemographics = details.getIncidentDemographics();
-        List<Civilians> civiliansList = incidentDemographics.getCiviliansList();
-        List<Officers> officersList = incidentDemographics.getOfficersList();
-        logger.info("officers list:" + officersList);
+
+        List<Civilians> civiliansList = details.getCivilians();
         logger.info("civilains list:" + civiliansList);
         int[] countOfCiviliansInIncident = submitCiviliansInvolvedInIncident(civiliansList, incidentId);
         logger.info("total civilians inserted in table :" + countOfCiviliansInIncident.length);
+
+        List<Officers> officersList = details.getOfficers();
+        logger.info("officers list:" + officersList);
         List<Civilians> civilianInIncident = getCivilianForIncident(incidentId);
         logger.info("civilianInIncident for given IncidentId :" + civilianInIncident);
         List<Civilians> updtciviliansList = getUpdatedCivilianForIncident(civilianInIncident, civiliansList);
@@ -85,8 +83,7 @@ public class IncidentDaoImpl implements IncidentDao {
         logger.info("total officers inserted in table:" + countOfOfficersInIncident.length);
         List<Officers> officersInIncident = getOfficrsForIncident(incidentId);
         logger.info("officersInIncident for given IncidentId :" + officersInIncident.toString());
-        List<Integer> officersId = getOfficersIdForIncident(incidentId);
-        logger.info("officersId involved in Incident :" + officersId);
+
         List<Officers> officers = getUpdatedOfficersForIncident(officersInIncident, officersList);
         logger.info("Officers list afterinserting officer table --- :" + officers);
         insertOfficersForceReason(officers);
@@ -97,13 +94,25 @@ public class IncidentDaoImpl implements IncidentDao {
         logger.info("total officerscivilans inserted in to table:" + countOfOfficerCivilianIdsUpdate.length);
         List<Integer> offCivList = getUpdatedForceDetails(officerCivilians);
         logger.info("officer civlians id's involved in incident:" + offCivList);
-        int[] forceDetailsInserted = insertForceDetails(officerCivilians, updtciviliansList, officers, offCivList);
-        logger.info("total forceDetails Inserted in to table:" + forceDetailsInserted.length);
-        int[] countOfOffCivliansInjuryDetailsInserted = insertInjuryDetails(officerCivilians, updtciviliansList, officers, offCivList);
-        logger.info("total Injury details inserted in to table:" + countOfOffCivliansInjuryDetailsInserted);
-        int[] countOfOffCivliansRaceDetailsInserted = insertIncidentRaceDetails(officerCivilians, updtciviliansList, officers);
-        logger.info("total race details inserted in to table:" + countOfOffCivliansRaceDetailsInserted.length);
-        // perceived weapon type
+
+        int[] forceLocationDetailsInserted = insertForceLocationDetails(officerCivilians, updtciviliansList, officers, offCivList);
+        logger.info("total force location Details Inserted in to table:" + forceLocationDetailsInserted.length);
+        int[] forceTypeDetailsInserted = insertForceTypeDetails(officerCivilians, updtciviliansList, officers, offCivList);
+        logger.info("total force type Details Inserted in to table:" + forceTypeDetailsInserted.length);
+
+        int[] countOfInjuryTypeDetailsInserted = insertInjuryTypeDetails(officerCivilians, updtciviliansList, officers, offCivList);
+        logger.info("total Injury type details inserted in to table:" + countOfInjuryTypeDetailsInserted.length);
+
+        int[] countOfPrimaryRaceDetails = insertPrimaryRaceDetails(officerCivilians, updtciviliansList, officers);
+        logger.info("total primary race details inserted in to table :"+countOfPrimaryRaceDetails.length);
+
+        int[] countOfAsianRaceDetails = insertAsianRaceDetails(officerCivilians, updtciviliansList, officersList);
+        logger.info("total asian race details inserted in to table :"+countOfAsianRaceDetails.length);
+
+        int[] countOfHawaiianRaceDetails = insertHawaiianRaceDetails(officerCivilians, updtciviliansList, officersList);
+        logger.info("total hawaiian race details inserted in to table :"+countOfHawaiianRaceDetails.length);
+
+       // perceived weapon type
         List<PerceivedWeaponType> perceivedWeaponTypeList = getPerceivedWeaponTypeList(updtciviliansList);
         if (!perceivedWeaponTypeList.isEmpty()) {
             int[] countOfPerceivedWeaponTypeList = submitperceivedWeaponTypeList(perceivedWeaponTypeList);
@@ -125,26 +134,72 @@ public class IncidentDaoImpl implements IncidentDao {
     }
 
     @Override
-    public IncidentCoreDetails getIncidentDetails(int incidentId) {
+    public Incidents createBulkIncidents(Incidents incidents)
+    {
+        List<Incident> incidentList = incidents.getIncident();
+        List<Incident> incidentList1 = new ArrayList<>();
+
+        for(Incident incident : incidentList)
+        {
+            Incident incident1 = insertBulkIncidents(incident);
+            incidentList1.add(incident1);
+        }
+        Incidents incidents1 = new Incidents();
+        incidents1.setIncident(incidentList);
+        return incidents1;
+    }
+
+
+
+    @Transactional
+    public Incident insertBulkIncidents(Incident incident)
+    {
+        Incident incident2 = new Incident();
+        try {
+            Screener screener = screenerDao.createIncident(incident.getScreener());
+            incident2 = createIncident(incident);
+            incident2.setScreener(screener);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return incident2;
+    }
+
+    @Override
+    public Incident getIncidentDetails(int incidentId) {
         logger.info("given IncidentId :" + incidentId);
-        IncidentCoreDetails incidentCoreDetails = getIncidentCoreDetails(incidentId);
-        IncidentDemographics incidentDemographics = new IncidentDemographics();
-        IncidentAddressDetails incidentAddressDetails = new IncidentAddressDetails();
+        Incident incident = getIncidentBasicDetails(incidentId);
 
         List<Civilians> civiliansList = getCivilians(incidentId);
         logger.info("civiliansList:"+civiliansList);
+
         List<Civilians> civiliansWithInjuryDetails = getCiviliansWithInjuryDetails(civiliansList);
         logger.info("civiliansWithInjuryDetails:"+civiliansWithInjuryDetails);
-        List<Civilians> civiliansWithRaceDetails = getUpdateCivilainDetailsWithCivilianRaceDetails(civiliansWithInjuryDetails);
-        logger.info("civiliansWithRaceDetails"+civiliansWithRaceDetails);
-        List<Civilians> civiliansWithFireArmDetails = getCiviliansWithFireArmDetails(civiliansWithRaceDetails);
+
+        List<Civilians> civiliansWithPrimaryRaceDetails = getUpdatedCiviliansWithPrimaryRaceDetails(civiliansWithInjuryDetails);
+        logger.info("civilians with primary race details :"+civiliansWithPrimaryRaceDetails);
+
+        List<Civilians> civiliansWithAsianRaceDetails = getUpdatedCiviliansWithAsianRaceDetails(civiliansWithPrimaryRaceDetails);
+        logger.info("civilians with asian race details :"+civiliansWithAsianRaceDetails);
+
+        List<Civilians> civiliansWithHawaiianDetails = getUpdateCivilainDetailsWithHawaiianRaceDetails(civiliansWithAsianRaceDetails);
+        logger.info("civilians with hawaiian race details :"+civiliansWithHawaiianDetails);
+
+        List<Civilians> civiliansWithFireArmDetails = getCiviliansWithFireArmDetails(civiliansWithHawaiianDetails);
         logger.info("civiliansWithFireArmDetails:"+civiliansWithFireArmDetails);
-        List<Civilians> civiliansWithForceDetails = getCiviliansWithForceDetails(civiliansWithFireArmDetails);
-        logger.info("civiliansWithForceDetails:"+civiliansWithForceDetails);
-        List<Civilians> civiliansWithConfirmedArmedWeaponDetails = getCiviliansWithConfirmedArmedWeapons(civiliansWithForceDetails);
+
+        List<Civilians> civiliansWithForceLocation = getCiviliansWithForceLocationDetails(civiliansWithFireArmDetails);
+        logger.info("civilians with force location details :"+civiliansWithForceLocation);
+
+        List<Civilians> civiliansWithForceType = getCiviliansWithForceTypeDetails(civiliansWithForceLocation);
+        logger.info("civilians with force type details :"+civiliansWithForceType);
+
+        List<Civilians> civiliansWithConfirmedArmedWeaponDetails = getCiviliansWithConfirmedArmedWeapons(civiliansWithForceType);
         logger.info("civiliansWithConfirmedArmedWeaponDetails:"+civiliansWithConfirmedArmedWeaponDetails);
+
         List<Civilians> civiliansWithPerceivedWeaponTypeDetails = getCiviliansWithPerceivedWeaponTypeDetails(civiliansWithConfirmedArmedWeaponDetails);
         logger.info("civiliansWithPerceivedWeaponTypeDetails:"+civiliansWithPerceivedWeaponTypeDetails);
+
         List<Civilians> civiliansWithResistanceTypeDetails = getCiviliansWithResistanceTypeDetails(civiliansWithPerceivedWeaponTypeDetails);
         logger.info("civiliansWithResistanceTypeDetails:"+civiliansWithResistanceTypeDetails);
 
@@ -152,35 +207,86 @@ public class IncidentDaoImpl implements IncidentDao {
         logger.info("officersList:"+officersList);
         List<Officers> officersWithInjuryDetails = getOfficersWithInjuryDetails(officersList);
         logger.info("officersWithInjuryDetails:"+officersWithInjuryDetails);
-        List<Officers> officersWithRaceDetails = getUpdateOfficersDetailsWithOfficerRaceDetails(officersWithInjuryDetails);
-        logger.info("officersWithRaceDetails:"+officersWithRaceDetails);
-        List<Officers> officersWithForceDetails = getOfficersWithForceDetails(officersWithRaceDetails);
-        logger.info("officersWithForceDetails"+officersWithForceDetails);
-        List<Officers> officersWithForceReasonDetails = getOfficersWithForceReasonDetails(officersWithForceDetails);
+
+        List<Officers> officersWithPrimaryRaceList = getUpdatedOfficersWithPrimaryRaceDetails(officersWithInjuryDetails);
+        logger.info("officers with primary race details :"+officersWithPrimaryRaceList);
+
+        List<Officers> officersWithAsianRaceList = getUpdatedOfficersWithAsianRaceDetails(officersWithPrimaryRaceList);
+        logger.info("officers with asian race list :"+officersWithAsianRaceList);
+
+        List<Officers> officersWithHawaiianRaceList = getUpdatedOfficersWithHawaiianRaceList(officersWithAsianRaceList);
+        logger.info(" officers with hawaiian race list :"+officersWithHawaiianRaceList);
+
+        List<Officers> officersWithForceLocation = getOfficersWithForceLocationDetails(officersWithHawaiianRaceList);
+        logger.info("officers with force location details :"+officersWithForceLocation);
+
+        List<Officers> officersWithForceType = getOfficersWithForceTypeDetails(officersWithForceLocation);
+        logger.info(" officers with force type details :"+officersWithForceType);
+
+        List<Officers> officersWithForceReasonDetails = getOfficersWithForceReasonDetails(officersWithForceType);
         logger.info("officersWithForceReasonDetails:"+officersWithForceReasonDetails);
 
-        /*
-        List<Civilians> updatedCivilians = Stream.concat(civiliansList.stream(), civiliansWithPerceivedWeaponList.stream())
-                .distinct()
-                .collect(Collectors.toList());
-        System.out.println(" updated civilains ------------"+updatedCivilians);
-        */
-        /*
-        List<Civilians> newList = civiliansWithResistance.stream()
-                .map(person -> civiliansWithPerceivedWeaponList.stream()                                       // map Person to
-                        .filter(i -> i.getCivilianId()==(person.getCivilianId()))  // .. the found Id
-                        .findFirst().orElse(person))                    // .. or else to self
-                .collect(Collectors.toList());
-        System.out.println(" newList------------"+newList);
-        */
-        List<IncidentLocation> incidentLocations = getIncidentLocationListDetails(incidentId);
-        logger.info("incidentLocationDetails:"+incidentLocations);
-        incidentAddressDetails.setIncidentLocations(incidentLocations);
-        incidentDemographics.setOfficersList(officersWithForceReasonDetails);
-        incidentDemographics.setCiviliansList(civiliansWithResistanceTypeDetails);
-        incidentCoreDetails.setIncidentAddressDetails(incidentAddressDetails);
-        incidentCoreDetails.setIncidentDemographics(incidentDemographics);
-        return incidentCoreDetails;
+        List<Address> addressList1 = getIncidentAddressDetails(incidentId);
+        logger.info("address list:"+addressList1);
+        incident.setAddresses(addressList1);
+        incident.setOfficers(officersWithForceReasonDetails);
+        incident.setCivilians(civiliansWithResistanceTypeDetails);
+        return incident;
+    }
+
+    public List<Officers> getUpdatedOfficersWithHawaiianRaceList(List<Officers> officersWithAsianRaceList) {
+        List<HawaiianPacificIslanderRace> hawaiianPacificIslanderRaceList = getOfficersHawaiianRaceDetails(officersWithAsianRaceList);
+        if (!hawaiianPacificIslanderRaceList.isEmpty()) {
+            return getUpdatedOfficersWithHawaiianRaceDetails(officersWithAsianRaceList, hawaiianPacificIslanderRaceList);
+        } else {
+            return officersWithAsianRaceList;
+        }
+    }
+
+
+    public List<Civilians> getUpdateCivilainDetailsWithHawaiianRaceDetails(List<Civilians> civiliansWithAsianRaceDetails) {
+        List<HawaiianPacificIslanderRace> hawaiianPacificIslanderRaceList = getCiviliansHawaiianRaceDetails(civiliansWithAsianRaceDetails);
+        if (!hawaiianPacificIslanderRaceList.isEmpty()) {
+            return getUpdateCivilainsWithHawaiianRaceList(civiliansWithAsianRaceDetails, hawaiianPacificIslanderRaceList);
+        } else {
+            return civiliansWithAsianRaceDetails;
+        }
+    }
+
+    public List<Officers> getUpdatedOfficersWithAsianRaceDetails(List<Officers> officersWithPrimaryRaceList) {
+        List<AsianRace> asianRaceList = getOfficersAsianRaceDetails(officersWithPrimaryRaceList);
+        if (!asianRaceList.isEmpty()) {
+            return getUpdatedOffWithAsianRaceDetails(officersWithPrimaryRaceList, asianRaceList);
+        } else {
+            return officersWithPrimaryRaceList;
+        }
+    }
+
+    public List<Civilians> getUpdatedCiviliansWithAsianRaceDetails(List<Civilians> civiliansWithPrimaryRaceDetails) {
+        List<AsianRace> asianRaceList = getCiviliansAsianRaceDetails(civiliansWithPrimaryRaceDetails);
+        if (!asianRaceList.isEmpty()) {
+            return getUpdateCivilainsWithAsianRaceList(civiliansWithPrimaryRaceDetails, asianRaceList);
+        } else {
+            return civiliansWithPrimaryRaceDetails;
+        }
+    }
+
+    public List<Officers> getUpdatedOfficersWithPrimaryRaceDetails(List<Officers> officersWithInjuryDetails) {
+        List<PrimaryRace> primaryRaceList = getOfficersPrimaryRaceDetails(officersWithInjuryDetails);
+        if (!primaryRaceList.isEmpty()) {
+            return getUpdateOfficersWithPrimaryRaceList(officersWithInjuryDetails, primaryRaceList);
+        } else {
+            return officersWithInjuryDetails;
+        }
+    }
+
+    public List<Civilians> getUpdatedCiviliansWithPrimaryRaceDetails(List<Civilians> civiliansWithInjuryDetails) {
+        List<PrimaryRace> primaryRaceList = getCiviliansPrimaryRaceDetails(civiliansWithInjuryDetails);
+        if (!primaryRaceList.isEmpty()) {
+            return getUpdateCivilainsWithPrimaryRaceList(civiliansWithInjuryDetails, primaryRaceList);
+        } else {
+            return civiliansWithInjuryDetails;
+        }
     }
 
     public void insertFireArmDetails(List<Civilians> updtciviliansList) {
@@ -197,104 +303,215 @@ public class IncidentDaoImpl implements IncidentDao {
         logger.info("total forceReason inserted in to table:"+countOfUpdatedForceReasonInIncident.length);
     }
 
-    public int[] insertForceDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1, List<Officers> officersList, List<Integer> offCivList) {
-        List<ForceDetails> forceDetailsOfCiviliansList = getForceDetailsOfCiviliansInIncident(officerCivilians, civiliansList1);
-        logger.info("forcedetails of civilains:" + forceDetailsOfCiviliansList);
-        List<ForceDetails> forceDetailsOfOfficersList = getForceDetailsOfOfficersInIncident(officerCivilians, officersList);
-        logger.info(" forcedetails of officers:" + forceDetailsOfOfficersList);
-        forceDetailsOfCiviliansList.addAll(forceDetailsOfOfficersList);
-        int[] countOfIncidentForceSubmitted = submitIncidentForceDetails(forceDetailsOfCiviliansList);
-        logger.info("total forcedetails inserted in to table:"+countOfIncidentForceSubmitted.length);
-        List<ForceDetails> forceDetailsList = getUpdatedForceDetailsWithForceId(offCivList);
-        logger.info("forcedetailslist with forceid's:" + forceDetailsList);
-        List<ForceDetails> civilainForceDetails = getUpdatedCivilianForceDetails(forceDetailsList, forceDetailsOfCiviliansList);
-        logger.info("updated civilainForceDetails:" + civilainForceDetails);
-
-        List<IncidentForceLocation> civiliansForceLocationDetails = getIncidentCiviliansForceDetails(civilainForceDetails);
-        logger.info("civiliansForceLocationDetails---:"+civiliansForceLocationDetails);
-        List<IncidentForceLocation> officersForceLocationDetails = getIncidentOfficersForceDetails(civilainForceDetails);
-        logger.info("officersForceLocationDetails---:"+officersForceLocationDetails);
-        civiliansForceLocationDetails.addAll(officersForceLocationDetails);
-        logger.info("all incident forlocation details :"+civiliansForceLocationDetails);
-        int[] countOfIncidentForceLocationsSubmitted = submittedForceLocationsForIncident(civiliansForceLocationDetails);
-        logger.info("total forcelocations inserted in to table:" + countOfIncidentForceLocationsSubmitted.length);
-
-        //List<IncidentForceLocation> incidentForceLocationList = getIncidentForceLocationList(civilainForceDetails);
-        //System.out.println(" all incident forlocation details --- :" + incidentForceLocationList);
-        //int[] countOfIncidentForceLocationsSubmitted = submittedForceLocationsForIncident(incidentForceLocationList);
-
-        List<IncidentForceType> civiliansForceTypeList = getIncidentCiviliansForceTypeDetails(civilainForceDetails);
-        logger.info("civiliansForceTypeList:"+civiliansForceTypeList);
-        List<IncidentForceType> officersForceTypeList = getIncidentOfficersForceTypeDetails(civilainForceDetails);
-        logger.info("officersForceTypeList:"+officersForceTypeList);
-        civiliansForceTypeList.addAll(officersForceTypeList);
-        logger.info("all incident forcetype details:"+civiliansForceTypeList);
-        int[] countOfIncidentForceTypeSubmitted = submittedForceTypeForIncident(civiliansForceTypeList);
-        logger.info(" total forcetype inserted in to table:" + countOfIncidentForceTypeSubmitted.length);
-
-        //List<IncidentForceType> incidentForceTypeList = getIncidentForceTypeList(civilainForceDetails);
-        //System.out.println(" all incident forcetype details --- :" + incidentForceTypeList);
-        //int[] countOfIncidentForceTypeSubmitted = submittedForceTypeForIncident(incidentForceTypeList);
-
-        return countOfIncidentForceSubmitted;
+    public int[] insertForceLocationDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1, List<Officers> officersList, List<Integer> offCivList)
+    {
+        List<ForceLocation> forceLocationListOfCivilians = getForceLocationDetailsOfCivilians(officerCivilians, civiliansList1);
+        logger.info(" civilains forcelocation details :"+forceLocationListOfCivilians);
+        List<ForceLocation> forceLocationListOfOfficers = getForceLocationDetailsOfOfficers(officerCivilians, officersList);
+        logger.info(" officers forcelocation details :"+forceLocationListOfOfficers);
+        forceLocationListOfCivilians.addAll(forceLocationListOfOfficers);
+        logger.info(" force location details in the incident :"+forceLocationListOfCivilians);
+        int[] countOfIncidentForceLocationSubmitted = submitIncidentForceLocationDetails(forceLocationListOfCivilians);
+        logger.info("total force location details inserted in to table:"+countOfIncidentForceLocationSubmitted.length);
+        return countOfIncidentForceLocationSubmitted;
     }
 
-    public int[] insertInjuryDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1, List<Officers> officersList, List<Integer> offCivList) {
-        List<Injury> civilainsInjuryDetails = getCiviliansInjuryList(officerCivilians, civiliansList1);
-        logger.info("injurydetails for civilains in incident:" + civilainsInjuryDetails);
-        List<Injury> officersInjuryDetails = getOfficersInjuryList(officerCivilians, officersList);
-        logger.info("injurydetails for officers in incident:" + officersInjuryDetails);
-        civilainsInjuryDetails.addAll(officersInjuryDetails);
-        logger.info("total injuries details:"+civilainsInjuryDetails);
-        int[] countOfOffCivliansInjuryDetailsSubmitted = submitIncidentInjuryDetails(civilainsInjuryDetails);
-        logger.info("total Injuries inserted in to table:"+ countOfOffCivliansInjuryDetailsSubmitted.length);
-        List<Injury> injuryList = getInjuryListWithInjuryId(offCivList);
-        logger.info("injurydetails with injuryId's:" + injuryList);
-        List<Injury> updatedInjuryDetails = getUpdatedInjuryDetails(injuryList, civilainsInjuryDetails);
-        logger.info("updated injurydetails:" + updatedInjuryDetails);
-        //injury type details
-        List<InjuryType> incidentInjuryTypeDetails = getIncidentInjuryTypeList(updatedInjuryDetails);
-        logger.info("all incident injury type details:" + incidentInjuryTypeDetails);
-        int[] countOfInjuryTypeDetailsSubmitted = submittInjuryTypeDetailsOfIncident(incidentInjuryTypeDetails);
-        logger.info("total injurytype details inserted in table:" + countOfInjuryTypeDetailsSubmitted.length);
+    public int[] insertForceTypeDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1, List<Officers> officersList, List<Integer> offCivList)
+    {
+        List<ForceType> forceTypeListOfCivilians = getForceTypeDetailsOfCivilians(officerCivilians, civiliansList1);
+        logger.info(" civilains force type details :"+forceTypeListOfCivilians);
+        List<ForceType> forceTypeListOfOfficers = getForceTypeDetailsOfOfficers(officerCivilians, officersList);
+        logger.info(" officers force type details :"+forceTypeListOfOfficers);
+        forceTypeListOfCivilians.addAll(forceTypeListOfOfficers);
+        logger.info(" force type details in the incident :"+forceTypeListOfCivilians);
+        int[] countOfIncidentForceTypeSubmitted = submittedForceTypeForIncident(forceTypeListOfCivilians);
+        logger.info("total force type details inserted in to table:"+countOfIncidentForceTypeSubmitted.length);
+        return countOfIncidentForceTypeSubmitted;
+    }
+
+    public int[] insertInjuryTypeDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1, List<Officers> officersList, List<Integer> offCivList)
+    {
+        List<InjuryType> civilainsInjuryTypeDetails = getCiviliansInjuryTypeList(officerCivilians, civiliansList1);
+        logger.info("injury type details for civilains in incident:" + civilainsInjuryTypeDetails);
+        List<InjuryType> officersInjuryTypeDetails = getOfficersInjuryTypeList(officerCivilians, officersList);
+        logger.info("injury type details for officers in incident:" + officersInjuryTypeDetails);
+        civilainsInjuryTypeDetails.addAll(officersInjuryTypeDetails);
+        logger.info("total injuries details:"+civilainsInjuryTypeDetails);
+        int[] countOfOffCivliansInjuryDetailsSubmitted = submitInjuryTypeDetailsOfIncident(civilainsInjuryTypeDetails);
+        logger.info("total Injuriey types inserted in to table:"+ countOfOffCivliansInjuryDetailsSubmitted.length);
         return countOfOffCivliansInjuryDetailsSubmitted;
     }
 
-    public int[] insertIncidentRaceDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1, List<Officers> officersList) {
-        List<Race> civilainsRaceDetails = getCiviliansRaceList(officerCivilians, civiliansList1);
-        logger.info("raceDetails of civilains in incident:" + civilainsRaceDetails);
-        List<Race> officersRaceDetails = getOfficersRaceDetailsOfIncident(officerCivilians, officersList);
-        logger.info("racedetails of Officers in incident:" + officersRaceDetails);
-        civilainsRaceDetails.addAll(officersRaceDetails);
-        logger.info("total race details in incident:" + civilainsRaceDetails);
-        int[] countOfOffCivliansRaceDetailsSubmitted = submitIncidentRaceDetails(civilainsRaceDetails);
-        logger.info(" total race details inserted in table:" +countOfOffCivliansRaceDetailsSubmitted.length);
-        List<Integer> offCivList = getUpdatedForceDetails(officerCivilians);
-        logger.info("officer civlians id's involved in incident:" + offCivList);
-        List<Race> raceList = getUpdatedRaceDetailsWithRaceId(offCivList);
-        logger.info("racedetails with raceid's:" + raceList);
-        List<Race> updatedRaceDetails = getUpdatedRaceDetails(raceList, civilainsRaceDetails);
-        logger.info("updated racedetails:" + updatedRaceDetails);
-        //primary race details
-        List<PrimaryRace> incidentPrimaryRaceDetails = getIncidentPrimayRaceList(updatedRaceDetails);
-        logger.info("all incident primaryRace details:" + incidentPrimaryRaceDetails);
-        int[] countOfPrimaryRaceDetailsSubmitted = submittPrimaryRaceDetailsOfIncident(incidentPrimaryRaceDetails);
-        logger.info("total primaryRaceDetails inserted in table:" + countOfPrimaryRaceDetailsSubmitted);
-        //asian race details
-        List<AsianRace> incidentAsianRaceDetails = getIncidentAsianRaceList(updatedRaceDetails);
-        if (!incidentAsianRaceDetails.isEmpty()) {
-            logger.info("all incident asianRace details:" + incidentAsianRaceDetails);
-            int[] countOfAsianRaceDetailsSubmitted = submittAsianRaceDetailsOfIncident(incidentAsianRaceDetails);
-            logger.info("total asianRaceDetails inserted in table:" + countOfAsianRaceDetailsSubmitted.length);
+    public List<PrimaryRace> getOfficersPrimaryRace(List<OfficerCivilians> officerCivilians, List<Officers> officersList)
+    {
+        List<PrimaryRace> primaryRaceList = new ArrayList<>();
+        for (OfficerCivilians offCiv : officerCivilians) {
+            for (Officers officers : officersList) {
+                if ((officers.getOfficerId() == offCiv.getOfficerId()) && (officers.getPrimaryRaceType() != null)) {
+                    for(String prim : officers.getPrimaryRaceType())
+                    {
+                        PrimaryRace primaryRace = new PrimaryRace();
+                        primaryRace.setPrimaryRace(prim);
+                        primaryRace.setOfficerId(officers.getOfficerId());
+                        primaryRace.setPrimaryRaceOf("O");
+                        primaryRace.setCivilianId(offCiv.getCivilianId());
+                        primaryRaceList.add(primaryRace);
+                    }
+
+                }
+            }
         }
-        //hawaiian race details
-        List<HawaiianPacificIslanderRace> incidentHawaiianRaceDetails = getIncidentHawaiianRaceList(updatedRaceDetails);
-        if (!incidentAsianRaceDetails.isEmpty()) {
-            logger.info("all incident hawaiian details:" + incidentHawaiianRaceDetails);
-            int[] countOfHawaiianRaceDetailsSubmitted = submittHawaiianRaceDetailsOfIncident(incidentHawaiianRaceDetails);
-            logger.info("total hawaiianRaceDetails inserted in table:" + countOfHawaiianRaceDetailsSubmitted.length);
+        return primaryRaceList.stream().distinct().collect(Collectors.toList());
+    }
+
+    public List<PrimaryRace> getCivilianPrimaryRaceDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1)
+    {
+        List<PrimaryRace> primaryRaceList = new ArrayList<>();
+        for (OfficerCivilians offCiv : officerCivilians) {
+            for (Civilians civilians : civiliansList1) {
+                if ((civilians.getCivilianId() == offCiv.getCivilianId()) && (civilians.getPrimaryRaceType() != null)) {
+                    for(String primRace : civilians.getPrimaryRaceType())
+                    {
+                        PrimaryRace primaryRace = new PrimaryRace();
+                        primaryRace.setCivilianId(civilians.getCivilianId());
+                        primaryRace.setPrimaryRaceOf("C");
+                        primaryRace.setOfficerId(offCiv.getOfficerId());
+                        primaryRace.setPrimaryRace(primRace);
+                        primaryRaceList.add(primaryRace);
+                    }
+
+                }
+            }
         }
-        return countOfOffCivliansRaceDetailsSubmitted;
+        return primaryRaceList.stream().distinct().collect(Collectors.toList());
+    }
+
+    public List<AsianRace> getOfficersAsianRace(List<OfficerCivilians> officerCivilians, List<Officers> officersList)
+    {
+        List<AsianRace> asianRaceList = new ArrayList<>();
+        for (OfficerCivilians offCiv : officerCivilians) {
+            for (Officers officers : officersList) {
+                if ((officers.getOfficerId() == offCiv.getOfficerId()) && (officers.getAsianRaceType() != null)) {
+                    for(String asian : officers.getAsianRaceType())
+                    {
+                        AsianRace asianRace = new AsianRace();
+                        asianRace.setAsianRace(asian);
+                        asianRace.setOfficerId(officers.getOfficerId());
+                        asianRace.setAsianRaceOf("O");
+                        asianRace.setCivilianId(offCiv.getCivilianId());
+                        asianRaceList.add(asianRace);
+                    }
+
+                }
+            }
+        }
+        return asianRaceList.stream().distinct().collect(Collectors.toList());
+    }
+
+    public List<AsianRace> getCivilianAsianRaceDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1)
+    {
+        List<AsianRace> asianRaceList = new ArrayList<>();
+        for (OfficerCivilians offCiv : officerCivilians) {
+            for (Civilians civilians : civiliansList1) {
+                if ((civilians.getCivilianId() == offCiv.getCivilianId()) && (civilians.getAsianRaceType() != null)) {
+                    for(String asRace : civilians.getAsianRaceType())
+                    {
+                        AsianRace asianRace = new AsianRace();
+                        asianRace.setCivilianId(civilians.getCivilianId());
+                        asianRace.setAsianRaceOf("C");
+                        asianRace.setOfficerId(offCiv.getOfficerId());
+                        asianRace.setAsianRace(asRace);
+                        asianRaceList.add(asianRace);
+                    }
+
+                }
+            }
+        }
+        return asianRaceList.stream().distinct().collect(Collectors.toList());
+    }
+
+    public List<HawaiianPacificIslanderRace> getOfficersHawaiianRace(List<OfficerCivilians> officerCivilians, List<Officers> officersList)
+    {
+        List<HawaiianPacificIslanderRace> hawaiianRaceList = new ArrayList<>();
+        for (OfficerCivilians offCiv : officerCivilians) {
+            for (Officers officers : officersList) {
+                if ((officers.getOfficerId() == offCiv.getOfficerId()) && (officers.getHawaiianRaceType() != null)) {
+                    for(String hawaiian : officers.getHawaiianRaceType())
+                    {
+                        HawaiianPacificIslanderRace hawaiianPacificIslanderRace = new HawaiianPacificIslanderRace();
+                        hawaiianPacificIslanderRace.setHawaiianRace(hawaiian);
+                        hawaiianPacificIslanderRace.setOfficerId(officers.getOfficerId());
+                        hawaiianPacificIslanderRace.setHawaiianRaceOf("O");
+                        hawaiianPacificIslanderRace.setCivilianId(offCiv.getCivilianId());
+                        hawaiianRaceList.add(hawaiianPacificIslanderRace);
+                    }
+
+                }
+            }
+        }
+        return hawaiianRaceList.stream().distinct().collect(Collectors.toList());
+    }
+
+    public List<HawaiianPacificIslanderRace> getCivilianHawaiianRaceDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1)
+    {
+        List<HawaiianPacificIslanderRace> hawaiianRaceList = new ArrayList<>();
+        for (OfficerCivilians offCiv : officerCivilians) {
+            for (Civilians civilians : civiliansList1) {
+                if ((civilians.getCivilianId() == offCiv.getCivilianId()) && (civilians.getHawaiianRaceType() != null)) {
+                    for(String hawaiianRace : civilians.getHawaiianRaceType())
+                    {
+                        HawaiianPacificIslanderRace hawaiianPacificIslanderRace = new HawaiianPacificIslanderRace();
+                        hawaiianPacificIslanderRace.setCivilianId(civilians.getCivilianId());
+                        hawaiianPacificIslanderRace.setHawaiianRace("C");
+                        hawaiianPacificIslanderRace.setOfficerId(offCiv.getOfficerId());
+                        hawaiianPacificIslanderRace.setHawaiianRace(hawaiianRace);
+                        hawaiianRaceList.add(hawaiianPacificIslanderRace);
+                    }
+
+                }
+            }
+        }
+        return hawaiianRaceList.stream().distinct().collect(Collectors.toList());
+    }
+
+
+    public int[] insertPrimaryRaceDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1, List<Officers> officersList)
+    {
+        List<PrimaryRace> civilainsPrimaryRaceList = getCivilianPrimaryRaceDetails(officerCivilians, civiliansList1);
+        logger.info(" civilians primary race list :"+civilainsPrimaryRaceList);
+        List<PrimaryRace> officersPrimaryRaceList = getOfficersPrimaryRace(officerCivilians, officersList);
+        logger.info(" officers primary race list :"+officersPrimaryRaceList);
+        civilainsPrimaryRaceList.addAll(officersPrimaryRaceList);
+        logger.info(" primary race details of incident :"+civilainsPrimaryRaceList);
+        int[] countOfInsertPrimaryRaceDetails = submittPrimaryRaceDetailsOfIncident(civilainsPrimaryRaceList);
+        logger.info(" total count of primary race details inserted in to table :"+countOfInsertPrimaryRaceDetails.length);
+        return countOfInsertPrimaryRaceDetails;
+    }
+
+    public int[] insertAsianRaceDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1, List<Officers> officersList)
+    {
+        List<AsianRace> civilainsAsianRaceList = getCivilianAsianRaceDetails(officerCivilians, civiliansList1);
+        logger.info(" civilians asian race list :"+civilainsAsianRaceList);
+        List<AsianRace> officersAsianRaceList = getOfficersAsianRace(officerCivilians, officersList);
+        logger.info(" officers asian race list :"+officersAsianRaceList);
+        civilainsAsianRaceList.addAll(officersAsianRaceList);
+        logger.info(" asian race details of incident :"+civilainsAsianRaceList);
+        int[] countOfInsertAsianRaceDetails = submittAsianRaceDetailsOfIncident(civilainsAsianRaceList);
+        logger.info(" total count of asian race details inserted in to table :"+countOfInsertAsianRaceDetails.length);
+        return countOfInsertAsianRaceDetails;
+    }
+
+    public int[] insertHawaiianRaceDetails(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1, List<Officers> officersList)
+    {
+        List<HawaiianPacificIslanderRace> civilainsHawaiianPacificRaceList = getCivilianHawaiianRaceDetails(officerCivilians, civiliansList1);
+        logger.info(" civilians hawaiian race list :"+civilainsHawaiianPacificRaceList);
+        List<HawaiianPacificIslanderRace> officersHawaiianRaceList = getOfficersHawaiianRace(officerCivilians, officersList);
+        logger.info(" officers hawaiian race list :"+officersHawaiianRaceList);
+        civilainsHawaiianPacificRaceList.addAll(officersHawaiianRaceList);
+        logger.info(" hawaiian race details of incident :"+civilainsHawaiianPacificRaceList);
+        int[] countOfInsertHawaiianRaceDetails = submittHawaiianRaceDetailsOfIncident(civilainsHawaiianPacificRaceList);
+        logger.info(" total count of hawaiian race details inserted in to table :"+countOfInsertHawaiianRaceDetails.length);
+        return countOfInsertHawaiianRaceDetails;
     }
 
     public List<Officers> getOfficersWithCivilians(List<Officers> officersList, List<OfficerCivilians> officerCivilians) {
@@ -328,25 +545,21 @@ public class IncidentDaoImpl implements IncidentDao {
     }
 
     public List<Civilians> getCiviliansWithInjuryDetails(List<Civilians> civiliansList) {
-        List<Injury> civilianInjuryList = getCiviliansInjuryDetails(civiliansList);
-        logger.info("civilians Injury List:" + civilianInjuryList);
-        List<InjuryType> civiliansInjuryType = getCiviliansInjuriesWithInjuryType(civilianInjuryList);
-        logger.info("civilians Injury Type List:" + civiliansInjuryType);
-        List<Injury> updatedCiviliansInjuryList = getUpdatedCiviliansInjuryDetails(civiliansInjuryType, civilianInjuryList);
-        logger.info("updated Civilians Injury List:" + updatedCiviliansInjuryList);
-        List<Civilians> civiliansDetails = getUpdatedCiviliansWithInjuryTypeForIncident(civiliansList, updatedCiviliansInjuryList);
-        return civiliansDetails;
+        List<InjuryType> civilianInjuryList = getCiviliansInjuryDetails(civiliansList);
+        if (!civilianInjuryList.isEmpty()) {
+            return getUpdatedCiviliansWithInjuryTypeForIncident(civiliansList, civilianInjuryList);
+        } else {
+            return civiliansList;
+        }
     }
 
     public List<Officers> getOfficersWithInjuryDetails(List<Officers> officersList) {
-        List<Injury> officersInjuryList = getOfficeresInjuryDetails(officersList);
-        logger.info("officers Injury List:" + officersInjuryList);
-        List<InjuryType> officersInjuryType = getOfficersInjuriesWithInjuryType(officersInjuryList);
-        logger.info("officers Injury Type List:" + officersInjuryType);
-        List<Injury> updatedOfficersInjuryList = getUpdatedOfficersInjuryDetails(officersInjuryType, officersInjuryList);
-        logger.info("updated Officers Injury List:" + updatedOfficersInjuryList);
-        List<Officers> updatedOfficersWithInjuryDetails = getUpdatedOfficersWithInjuryTypeForIncident(officersList, updatedOfficersInjuryList);
-        return updatedOfficersWithInjuryDetails;
+        List<InjuryType> officersInjuryType = getOfficersInjuriesWithInjuryType(officersList);
+        if (!officersInjuryType.isEmpty()) {
+            return getUpdatedOfficersWithInjuryTypeForIncident(officersList, officersInjuryType);
+        } else {
+            return officersList;
+        }
     }
 
     public List<ForceReason> getOfficersForceReasonDetails(List<Officers> officersList) {
@@ -373,55 +586,6 @@ public class IncidentDaoImpl implements IncidentDao {
         return officersWithForceDetails;
     }
 
-    public List<Officers> getOfficersWithForceDetails(List<Officers> officersWithRaceDetails) {
-        List<ForceDetails> officersForceDetails = getOfficersForceDetails(officersWithRaceDetails);
-        logger.info("officersForceDetails for given IncidentId:" + officersForceDetails);
-        List<IncidentForceLocation> officersForceLocationDetails = getOfficersForceLocationDetails(officersForceDetails);
-        logger.info("officersForceLocationDetails gor given incident:" + officersForceLocationDetails);
-        List<IncidentForceType> officersForceTypeDetails = getOfficersForceTypeDetails(officersForceDetails);
-        logger.info("officersForceTypeDetails for given incident:" + officersForceTypeDetails);
-        List<ForceDetails> updatedOfficersForceWithForceLocation = getOfficersForceWithForceLocation(officersForceDetails, officersForceLocationDetails);
-        logger.info("updatedOfficersForceWithForceLocation for given incident:" + updatedOfficersForceWithForceLocation);
-        List<ForceDetails> updatedOfficersForceWithLocationTypeDetails = getUpdatedOfficersForceWithLocationTypeDetails(updatedOfficersForceWithForceLocation, officersForceTypeDetails);
-        logger.info("updatedOfficersForceWithLocationTypeDetails for given incident:" + updatedOfficersForceWithLocationTypeDetails);
-        List<Officers> updatedOfficersWithForceDetails = getUpdatedOfficersWithOfficersForceDetails(officersWithRaceDetails, updatedOfficersForceWithLocationTypeDetails);
-        return updatedOfficersWithForceDetails;
-    }
-
-    public List<Officers> getUpdateOfficersDetailsWithOfficerRaceDetails(List<Officers> officersWithInjuryDetails) {
-        List<Race> officersRaceList = getOfficeresRaceDetails(officersWithInjuryDetails);
-        logger.info("officersRaceList:" + officersRaceList);
-        List<PrimaryRace> officersPrimaryRaceDetails = getOfficersPrimaryRaceDetails(officersRaceList);
-        logger.info("officers Primary Race Details:" + officersPrimaryRaceDetails);
-        List<AsianRace> officersAsianRaceDetails = getOfficersAsianRaceDetails(officersRaceList);
-        logger.info("officers Asian Race Details:" + officersAsianRaceDetails);
-        List<HawaiianPacificIslanderRace> officersHawaiianRaceDetails = getOfficersHawaiianRaceDetails(officersRaceList);
-        logger.info("officers Hawaiian Race Details:" + officersHawaiianRaceDetails);
-        List<Race> updateOfficersRaceWithOfficersPrimaryRace = getUpdatedOfficersRaceWithPrimaryRaceDetails(officersPrimaryRaceDetails, officersRaceList);
-        logger.info("update Officers Race With Officers Primary Race:" + updateOfficersRaceWithOfficersPrimaryRace);
-        List<Race> updateOfficersRaceWithOfficersAsianRace = getUpdatedOfficersRaceWithAsianRaceDetails(officersAsianRaceDetails, officersRaceList);
-        logger.info("update Officers Race With Officers Asian Race:" + updateOfficersRaceWithOfficersAsianRace);
-        List<Race> updateOfficersRaceWithOfficersHawaiianRace = getUpdatedOfficersRaceWithHawaiianRaceDetails(officersHawaiianRaceDetails, officersRaceList);
-        logger.info("update Officers Race With Officers Hawaiian Race:" + updateOfficersRaceWithOfficersHawaiianRace);
-        List<Officers> updateOfficersWithPrimaryRace = getUpdateOfficersWithPrimaryRace(officersWithInjuryDetails, updateOfficersRaceWithOfficersPrimaryRace);
-        logger.info("officers with primaryRace:" +updateOfficersWithPrimaryRace);
-
-        List<Officers> updateOfficersWithAsianRace;
-        if (!updateOfficersRaceWithOfficersAsianRace.isEmpty()) {
-            updateOfficersWithAsianRace = getUpdateOfficersWithAsianRace(updateOfficersWithPrimaryRace, updateOfficersRaceWithOfficersAsianRace);
-            updateOfficersWithPrimaryRace = updateOfficersWithAsianRace;
-            logger.info("officers with asianRace :" + updateOfficersWithPrimaryRace);
-        }
-
-        List<Officers> officersWithHawaiianRace;
-        if (!updateOfficersRaceWithOfficersHawaiianRace.isEmpty()) {
-            officersWithHawaiianRace = getUpdateOfficersWithHawaiianRace(updateOfficersWithPrimaryRace, updateOfficersRaceWithOfficersHawaiianRace);
-            updateOfficersWithPrimaryRace = officersWithHawaiianRace;
-            logger.info("officers with hawaiian race :" + updateOfficersWithPrimaryRace);
-        }
-        return updateOfficersWithPrimaryRace;
-    }
-
     public List<Civilians> getCiviliansWithResistanceTypeDetails(List<Civilians> civiliansWithPerceivedWeaponTypeDetails) {
         List<ResistanceType> resistanceTypeList = getResistanceTypeListForCivilian(civiliansWithPerceivedWeaponTypeDetails);
         if (!resistanceTypeList.isEmpty()) {
@@ -433,12 +597,6 @@ public class IncidentDaoImpl implements IncidentDao {
                     .collect(Collectors.toList());
         }
         return civiliansWithPerceivedWeaponTypeDetails;
-
-//        return civiliansWithResistance.stream()
-//                .map(person -> civiliansWithPerceivedWeaponList.stream()                                       // map Person to
-//                        .filter(i -> i.getCivilianId()==(person.getCivilianId()))  // .. the found Id
-//                        .findFirst().orElse(person))                    // .. or else to self
-//                .collect(Collectors.toList());
     }
 
     public List<Civilians> getCiviliansWithPerceivedWeaponTypeDetails(List<Civilians> civiliansWithConfirmedArmedWeaponDetails) {
@@ -463,11 +621,8 @@ public class IncidentDaoImpl implements IncidentDao {
     }
 
     public List<Civilians> getCiviliansWithConfirmedArmedWeapons(List<Civilians> civiliansWithForceDetails) {
-        //incident_confirmed_armed_weapon
-        System.out.println("civiliansWithForceDetails @getCiviliansWithConfirmedArmedWeapons ---:"+civiliansWithForceDetails);
         List<ConfimedArmedWeapon> confimedArmedWeapons = getConfimedWeaponTypeListForCivilian(civiliansWithForceDetails);
-        System.out.println(" confirmedArmedWeapons for given incident ----:" + confimedArmedWeapons);
-        List<Civilians> civiliansWithConfirmedArmedWeapons = new ArrayList<>();
+        List<Civilians> civiliansWithConfirmedArmedWeapons;
         if (!confimedArmedWeapons.isEmpty()) {
             civiliansWithConfirmedArmedWeapons = getUpdatedConfirmedArmedWeaponsOfCivilians(confimedArmedWeapons, civiliansWithForceDetails);
             System.out.println(" updated civilians with confirmedArmedWeapons ---- :" + civiliansWithConfirmedArmedWeapons);
@@ -480,36 +635,48 @@ public class IncidentDaoImpl implements IncidentDao {
         return civiliansWithForceDetails;
     }
 
-    public List<Civilians> getCiviliansWithForceDetails(List<Civilians> civiliansWithFireArmDetails) {
-        //forcedetails -- civilians
-        List<ForceDetails> civilianForceDetails = getCivilianForceDetails(civiliansWithFireArmDetails);
-        System.out.println(" civilianForceDetails for given IncidentId ---- :" + civilianForceDetails);
-        List<IncidentForceLocation> civilianForceLocationDetails = getCivilianForceLocationDetails(civilianForceDetails);
-        System.out.println(" civilianForceLocationDetails gor given incident ----:" + civilianForceLocationDetails);
-        List<IncidentForceType> civilianForceTypeDetails = getCivilianForceTypeDetails(civilianForceDetails);
-        System.out.println(" civilianForceTypeDetails for given incident ---- :" + civilianForceTypeDetails);
-        List<ForceDetails> updatedCivilianForceWithForceLocation = getCivilianForceWithForceLocation(civilianForceDetails, civilianForceLocationDetails);
-        System.out.println("updatedCivilianForceWithForceLocation for given incident ---:" + updatedCivilianForceWithForceLocation);
-        List<ForceDetails> updatedCivilianForceWithLocationTypeDetails = getUpdatedCivilianForceWithLocationTypeDetails(updatedCivilianForceWithForceLocation, civilianForceTypeDetails);
-        System.out.println("updatedCivilianForceWithLocationTypeDetails for given incident --- :" + updatedCivilianForceWithLocationTypeDetails);
-        List<Civilians> updatedCivilinsWithForceDetails = getUpdatedCiviliansWithCivilianForceDetails(civiliansWithFireArmDetails, updatedCivilianForceWithLocationTypeDetails);
-        System.out.println(" updatedCivilinsWithForceDetails -------------------:" + updatedCivilinsWithForceDetails);
-        return updatedCivilinsWithForceDetails.stream()
-                .map(civilians -> civiliansWithFireArmDetails.stream()
-                        .filter(i -> i.getCivilianId() == (civilians.getCivilianId()))
-                        .findFirst().orElse(civilians))
-                .collect(Collectors.toList());
-        //return updatedCivilinsWithForceDetails;
+    public List<Officers> getOfficersWithForceTypeDetails(List<Officers> officersWithForceLocation) {
+        List<ForceType> forceTypeList = getOfficersForceTypeDetails(officersWithForceLocation);
+        if (!forceTypeList.isEmpty()) {
+            return getUpdateOfficersWithForceType(officersWithForceLocation, forceTypeList);
+        } else {
+            return officersWithForceLocation;
+        }
+    }
+
+    public List<Civilians> getCiviliansWithForceTypeDetails(List<Civilians> civiliansWithForceLocation)
+    {
+        List<ForceType> forceTypeList = getCivilianForceTypeDetails(civiliansWithForceLocation);
+        if (!forceTypeList.isEmpty()) {
+            return getUpdateCiviliansWithForceType(civiliansWithForceLocation, forceTypeList);
+        } else {
+            return civiliansWithForceLocation;
+        }
+    }
+
+    public List<Officers> getOfficersWithForceLocationDetails(List<Officers> officersWithHawaiianRaceList) {
+        List<ForceLocation> forceLocationList = getOfficersForceLocationDetails(officersWithHawaiianRaceList);
+        if (!forceLocationList.isEmpty()) {
+            return getUpdateOfficersWithForceLocation(officersWithHawaiianRaceList, forceLocationList);
+        } else {
+            return officersWithHawaiianRaceList;
+        }
+    }
+
+    public List<Civilians> getCiviliansWithForceLocationDetails(List<Civilians> civiliansWithFireArmDetails) {
+        List<ForceLocation> forceLocationList = getCivilianForceLocationDetails(civiliansWithFireArmDetails);
+        if (!forceLocationList.isEmpty()) {
+            return getUpdateCiviliansWithForceLocation(civiliansWithFireArmDetails, forceLocationList);
+        } else {
+            return civiliansWithFireArmDetails;
+        }
     }
 
     public List<Civilians> getCiviliansWithFireArmDetails(List<Civilians> civiliansWithRaceDetails) {
-        // get civilain fireArm details
-        System.out.println(" civiliansWithRaceDetails @getCiviliansWithFireArmDetails----:"+civiliansWithRaceDetails);
         List<FireArm> civilainFireArms = getClientFireArmListInIncident(civiliansWithRaceDetails);
         System.out.println(" civilainFireArms for given incident --- :" + civilainFireArms);
         if (!civilainFireArms.isEmpty()) {
             List<Civilians> civiliansWithFireArmList = getUpdateCiviliansWithFireArm(civiliansWithRaceDetails, civilainFireArms);
-            System.out.println(" civiliansWithFireArmList -------------------:" + civiliansWithFireArmList);
             return civiliansWithFireArmList.stream()
                     .map(civilians -> civiliansWithRaceDetails.stream()
                             .filter(i -> i.getCivilianId() == (civilians.getCivilianId()))
@@ -519,115 +686,32 @@ public class IncidentDaoImpl implements IncidentDao {
         return civiliansWithRaceDetails;
     }
 
-    public List<Civilians> getUpdateCivilainDetailsWithCivilianRaceDetails(List<Civilians> CiviliansDetails) {
-        //get race details
-        List<Race> civilianRaceList = getCiviliansRaceDetails(CiviliansDetails);
-        System.out.println("civilianRaceList------------:" + civilianRaceList);
-        //get PrimaryRace details
-        List<PrimaryRace> civiliansPrimaryRaceDetails = getCiviliansPrimaryRaceDetails(civilianRaceList);
-        System.out.println("civiliansPrimaryRaceDetails--------:" + civiliansPrimaryRaceDetails);
-        //get asianRaceType details
-        List<AsianRace> civiliansAsianRaceDetails = getCiviliansAsianRaceDetails(civilianRaceList);
-        System.out.println("civiliansAsianRaceDetails--------:" + civiliansAsianRaceDetails);
-        //get hawaiisn racetype details
-        List<HawaiianPacificIslanderRace> civiliansHawaiianRaceDetails = getCiviliansHawaiianRaceDetails(civilianRaceList);
-        System.out.println("civiliansHawaiianRaceDetails--------:" + civiliansHawaiianRaceDetails);
-
-        List<Race> updatedCiviliansRaceWithCiviliansPrimaryRace = getUpdatedCiviliansRaceWithPrimaryRaceDetails(civiliansPrimaryRaceDetails, civilianRaceList);
-        System.out.println("updatedCiviliansRaceWithCiviliansPrimaryRace-----------:" + updatedCiviliansRaceWithCiviliansPrimaryRace);
-
-        List<Race> updatedCiviliansRaceWithCiviliansAsianRace = getUpdatedCiviliansRaceWithAsianRaceDetails(civiliansAsianRaceDetails, civilianRaceList);
-        System.out.println("updatedCiviliansRaceWithCiviliansAsianRace-----------:" + updatedCiviliansRaceWithCiviliansAsianRace);
-
-        List<Race> updatedCiviliansRaceWithCiviliansHawaiianRace = getUpdatedCiviliansRaceWithHawaiianRaceDetails(civiliansHawaiianRaceDetails, civilianRaceList);
-        System.out.println("updatedCiviliansRaceWithCiviliansHawaiianRace-----------:" + updatedCiviliansRaceWithCiviliansHawaiianRace);
-
-        List<Civilians> updateCivilainsWithPrimaryRace = getUpdateCivilainsWithPrimaryRace(CiviliansDetails, updatedCiviliansRaceWithCiviliansPrimaryRace);
-        System.out.println("civilians with primaryRace :" + updateCivilainsWithPrimaryRace);
-
-        List<Civilians> updateCivilainsWithAsianRace = new ArrayList<>();
-        if (!updatedCiviliansRaceWithCiviliansAsianRace.isEmpty()) {
-            updateCivilainsWithAsianRace = getUpdateCivilainsWithAsianRace(updateCivilainsWithPrimaryRace, updatedCiviliansRaceWithCiviliansAsianRace);
-            updateCivilainsWithPrimaryRace = updateCivilainsWithAsianRace;
-            System.out.println("civilians with asianRace :" + updateCivilainsWithPrimaryRace);
-        }
-
-        if (!updatedCiviliansRaceWithCiviliansHawaiianRace.isEmpty()) {
-            updateCivilainsWithPrimaryRace = getUpdateCiviliansWithHawaiianRace(updateCivilainsWithPrimaryRace, updatedCiviliansRaceWithCiviliansHawaiianRace);
-            System.out.println("civlians with hawaiian race :" + updateCivilainsWithPrimaryRace);
-
-        }
-        return updateCivilainsWithPrimaryRace.stream()
-                .map(civilians -> CiviliansDetails.stream()
-                        .filter(i -> i.getCivilianId()==(civilians.getCivilianId()))
-                        .findFirst().orElse(civilians))
-                .collect(Collectors.toList());
-    }
-
-    public List<IncidentForceType> getOfficersForceTypeDetails(List<ForceDetails> officersForceDetails) {
-        List<IncidentForceType> incidentForceTypeList = null;
+    public List<ForceType> getOfficersForceTypeDetails(List<Officers> officersForceDetails) {
+        List<ForceType> incidentForceTypeList = null;
         try {
-            List<Integer> forceIds = getCivilianForceIds(officersForceDetails);
-            logger.info("forceIds of officers for given incident:"+forceIds);
-            String inParams = forceIds.stream()
+            List<Integer> civilanIds = getOfficerIds(officersForceDetails);
+            String inParams = civilanIds.stream()
                     .map(Object::toString)
                     .collect(Collectors.joining(","));
-            incidentForceTypeList = jdbcTemplate.query(String.format(incidentSql.GET_INCIDENT_FORCE_TYPE, inParams), new ForceTypeRowMapper());
+            incidentForceTypeList = jdbcTemplate.query(String.format(incidentSql.GET_INCIDENT_OFF_FORCE_TYPE, inParams), new ForceTypeRowMapper());
         } catch (DataAccessException e) {
             e.printStackTrace();
         }
         return incidentForceTypeList;
     }
 
-    public List<IncidentForceType> getCivilianForceTypeDetails(List<ForceDetails> civilianForceDetails) {
-        List<Integer> forceIds = getCivilianForceIds(civilianForceDetails);
-        System.out.println("forceIds for getCivilianForceTypeDetails --- :" + forceIds);
-        System.out.println(" getCivilianForceTypeDetails for force_level_force_id --- : " + forceIds);
-        String inParams = forceIds.stream()
-                .map(Object::toString)
-                .collect(Collectors.joining(","));
-        System.out.println("inParams for get getCivilianForceTypeDetails --- :" + inParams);
-        List<IncidentForceType> incidentForceTypeList = jdbcTemplate.query(String.format(incidentSql.GET_INCIDENT_CIVILIANS_FORCE_TYPE, inParams), new ForceTypeRowMapper());
-        return incidentForceTypeList;
-    }
-
-    public List<IncidentForceLocation> getOfficersForceLocationDetails(List<ForceDetails> officersForceDetails) {
-        List<IncidentForceLocation> incidentForceLocationList = null;
+    public List<ForceLocation> getOfficersForceLocationDetails(List<Officers> officersWithHawaiianRaceList) {
+        List<ForceLocation> forceLocationList = null;
         try {
-            List<Integer> forceIds = getCivilianForceIds(officersForceDetails);
-            String inParams = forceIds.stream()
-                    .map(Object::toString)
-                    .collect(Collectors.joining(","));
-            incidentForceLocationList = jdbcTemplate.query(String.format(incidentSql.GET_OFFICERS_FORCE_LOCATION_DETAILS, inParams), new ForceLocationRowMapper());
-        } catch (DataAccessException e) {
-            e.printStackTrace();
-        }
-        return incidentForceLocationList;
-    }
-
-
-    public List<IncidentForceLocation> getCivilianForceLocationDetails(List<ForceDetails> civilianForceDetails) {
-        List<Integer> forceIds = getCivilianForceIds(civilianForceDetails);
-        String inParams = forceIds.stream()
-                .map(Object::toString)
-                .collect(Collectors.joining(","));
-        System.out.println("inParams for get getCivilianForceDetails --- :" + inParams);
-        List<IncidentForceLocation> incidentForceLocationList = jdbcTemplate.query(String.format(incidentSql.GET_INCIDENT_CIVILIANS_FORCE_LOCATION, inParams), new ForceLocationRowMapper());
-        return incidentForceLocationList;
-    }
-
-    public List<ForceDetails> getOfficersForceDetails(List<Officers> updateOfficersWithPrimaryRace) {
-        List<ForceDetails> forceDetailsList=new ArrayList<>();
-        try {
-            List<Integer> officerIds = getOfficerIds(updateOfficersWithPrimaryRace);
+            List<Integer> officerIds = getOfficerIds(officersWithHawaiianRaceList);
             String inParams = officerIds.stream()
                     .map(Object::toString)
                     .collect(Collectors.joining(","));
-            forceDetailsList = jdbcTemplate.query(String.format(incidentSql.GET_OFFICERS_FORCE_DETAILS, inParams), new ForceDetailsRowMapper());
+            forceLocationList = jdbcTemplate.query(String.format(incidentSql.GET_OFFICERS_FORCE_LOCATION_DETAILS, inParams), new ForceLocationRowMapper());
         } catch (DataAccessException e) {
             e.printStackTrace();
         }
-        return forceDetailsList;
+        return forceLocationList;
     }
 
     public List<ResistanceType> getResistanceTypeListForCivilian(List<Civilians> civiliansWithPerceivedWeaponList) {
@@ -672,18 +756,34 @@ public class IncidentDaoImpl implements IncidentDao {
         return confimedArmedWeapons;
     }
 
-    public List<ForceDetails> getCivilianForceDetails(List<Civilians> civiliansWithFireArmList) {
-        List<ForceDetails> forceDetailsList = new ArrayList<>();
+    public List<ForceType> getCivilianForceTypeDetails(List<Civilians> civiliansWithForceLocation)
+    {
+        List<ForceType> forceTypeList = new ArrayList<>();
         try {
-            List<Integer> civilianIds = getCivilianIds(civiliansWithFireArmList);
+            List<Integer> civilianIds = getCivilianIds(civiliansWithForceLocation);
             String inParams = civilianIds.stream()
                     .map(Object::toString)
                     .collect(Collectors.joining(","));
-            forceDetailsList = jdbcTemplate.query(String.format(incidentSql.GET_CIV_FORCE_DETAILS, inParams), new ForceDetailsRowMapper());
+            forceTypeList = jdbcTemplate.query(String.format(incidentSql.GET_INCIDENT_CIVILIANS_FORCE_TYPE, inParams), new ForceTypeRowMapper());
         } catch (DataAccessException e) {
             e.printStackTrace();
         }
-        return forceDetailsList;
+        return forceTypeList;
+    }
+
+
+    public List<ForceLocation> getCivilianForceLocationDetails(List<Civilians> civiliansList) {
+        List<ForceLocation> forceLocationList = new ArrayList<>();
+        try {
+            List<Integer> civilianIds = getCivilianIds(civiliansList);
+            String inParams = civilianIds.stream()
+                    .map(Object::toString)
+                    .collect(Collectors.joining(","));
+            forceLocationList = jdbcTemplate.query(String.format(incidentSql.GET_INCIDENT_CIVILIANS_FORCE_LOCATION, inParams), new ForceLocationRowMapper());
+        } catch (DataAccessException e) {
+            e.printStackTrace();
+        }
+        return forceLocationList;
     }
 
     public List<FireArm> getClientFireArmListInIncident(List<Civilians> updateCivilainsWithPrimaryRace) {
@@ -700,12 +800,38 @@ public class IncidentDaoImpl implements IncidentDao {
         return fireArmList;
     }
 
-    public List<Civilians> getUpdatedCiviliansWithInjuryTypeForIncident(List<Civilians> civiliansList, List<Injury> updatedCiviliansInjuryList) {
+    public List<Officers> getUpdatedOfficersWithInjuryTypeForIncident(List<Officers> officersList, List<InjuryType> officersInjuryType)
+    {
+        List<Officers>  ofcList = new ArrayList<>();
+        for (Officers officers : officersList) {
+            for (InjuryType injuryType : officersInjuryType) {
+                if (officers.getOfficerId() == injuryType.getOfficerId()) {
+                    String injType = injuryType.getInjuryType();
+                    List<String> injuryTypeList = new ArrayList<>();
+                    injuryTypeList.add(injType);
+                    officers.setInjuryType(injuryTypeList);
+                    ofcList.add(officers);
+                }
+            }
+        }
+        return officersList.stream()
+                .map(officers -> ofcList.stream()
+                        .filter(i -> i.getOfficerId()==(officers.getOfficerId()))
+                        .findFirst().orElse(officers))
+                .collect(Collectors.toList());
+    }
+
+
+    public List<Civilians> getUpdatedCiviliansWithInjuryTypeForIncident(List<Civilians> civiliansList, List<InjuryType> civilianInjuryList)
+    {
         List<Civilians> civList = new ArrayList<>();
         for (Civilians civilians : civiliansList) {
-            for (Injury injury : updatedCiviliansInjuryList) {
-                if (civilians.getCivilianId() == injury.getCivilianId()) {
-                    civilians.setInjuryDetails(injury);
+            for (InjuryType injuryType : civilianInjuryList) {
+                if (civilians.getCivilianId() == injuryType.getCivilianId()) {
+                    String injType = injuryType.getInjuryType();
+                    List<String> injuryTypeList = new ArrayList<>();
+                    injuryTypeList.add(injType);
+                    civilians.setInjuryType(injuryTypeList);
                     civList.add(civilians);
                 }
             }
@@ -717,177 +843,122 @@ public class IncidentDaoImpl implements IncidentDao {
                 .collect(Collectors.toList());
     }
 
-    public List<Officers> getUpdateOfficersWithHawaiianRace(List<Officers> updateOfficersWithPrimaryRace, List<Race> updateOfficersRaceWithOfficersHawaiianRace) {
+    public List<Officers> getUpdatedOfficersWithHawaiianRaceDetails(List<Officers> officersWithAsianRaceList, List<HawaiianPacificIslanderRace> hawaiianPacificIslanderRaceList)
+    {
         List<Officers> officersList = new ArrayList<>();
-        for (Officers officers : updateOfficersWithPrimaryRace) {
-            for (Race hawaiianRace : updateOfficersRaceWithOfficersHawaiianRace) {
-                Race race = new Race();
-                if (officers.getOfficerId() == hawaiianRace.getOfficerId()) {
-                    race.setPrimaryRaceType(hawaiianRace.getPrimaryRaceType());
-                    race.setAsianRaceType(hawaiianRace.getAsianRaceType());
-                    race.setHawaiianRaceType(hawaiianRace.getHawaiianRaceType());
-                    officers.setRaceDetails(race);
+        for (Officers officers : officersWithAsianRaceList) {
+            for (HawaiianPacificIslanderRace hawaiianPacificIslanderRace : hawaiianPacificIslanderRaceList) {
+                List<String> hawaiianList = new ArrayList<>();
+                if (officers.getOfficerId() == hawaiianPacificIslanderRace.getOfficerId()) {
+                    String hRace = hawaiianPacificIslanderRace.getHawaiianRace();
+                    hawaiianList.add(hRace);
+                    officers.setHawaiianRaceType(hawaiianList);
                     officersList.add(officers);
                 }
             }
         }
-        return updateOfficersWithPrimaryRace.stream()
+        return officersWithAsianRaceList.stream()
                 .map(officers -> officersList.stream()
                         .filter(i -> i.getOfficerId()==(officers.getOfficerId()))
                         .findFirst().orElse(officers))
                 .collect(Collectors.toList());
+
     }
 
-
-    public List<Civilians> getUpdateCiviliansWithHawaiianRace(List<Civilians> updateCivilainsWithAsianRace, List<Race> updatedCiviliansRaceWithCiviliansHawaiianRace) {
-        List<Civilians> civiliansList = new ArrayList<>();
-        for (Civilians civilians : updateCivilainsWithAsianRace) {
-            for (Race hawaiianRace : updatedCiviliansRaceWithCiviliansHawaiianRace) {
-                Race race = new Race();
-                if (civilians.getCivilianId() == hawaiianRace.getCivilainsId()) {
-                    race.setPrimaryRaceType(hawaiianRace.getPrimaryRaceType());
-                    race.setAsianRaceType(hawaiianRace.getAsianRaceType());
-                    race.setHawaiianRaceType(hawaiianRace.getHawaiianRaceType());
-                    civilians.setRaceDetails(race);
-                    civiliansList.add(civilians);
+    public List<Civilians> getUpdateCivilainsWithHawaiianRaceList(List<Civilians> civiliansWithAsianRaceDetails, List<HawaiianPacificIslanderRace> hawaiianPacificIslanderRaceList)
+    {
+        List<Civilians> civiliansList1 = new ArrayList<>();
+        for (Civilians civilians : civiliansWithAsianRaceDetails) {
+            for (HawaiianPacificIslanderRace hawaiianPacificIslanderRace : hawaiianPacificIslanderRaceList) {
+                List<String> hawaiianList = new ArrayList<>();
+                if (civilians.getCivilianId() == hawaiianPacificIslanderRace.getCivilianId()) {
+                    String hRace = hawaiianPacificIslanderRace.getHawaiianRace();
+                    hawaiianList.add(hRace);
+                    civilians.setHawaiianRaceType(hawaiianList);
+                    civiliansList1.add(civilians);
                 }
             }
         }
-        return updateCivilainsWithAsianRace.stream()
-                .map(civilians -> civiliansList.stream()
+        return civiliansWithAsianRaceDetails.stream()
+                .map(civilians -> civiliansList1.stream()
                         .filter(i -> i.getCivilianId()==(civilians.getCivilianId()))
                         .findFirst().orElse(civilians))
                 .collect(Collectors.toList());
     }
 
-    public List<Officers> getUpdateOfficersWithAsianRace(List<Officers> updateOfficersWithPrimaryRace, List<Race> updateOfficersRaceWithOfficersAsianRace) {
+    public List<Officers> getUpdatedOffWithAsianRaceDetails(List<Officers> officersWithPrimaryRaceList, List<AsianRace> asianRaceList)
+    {
         List<Officers> officersList = new ArrayList<>();
-        for (Officers officers : updateOfficersWithPrimaryRace) {
-            for (Race asianRace : updateOfficersRaceWithOfficersAsianRace) {
-                Race race = new Race();
+        for (Officers officers : officersWithPrimaryRaceList) {
+            for (AsianRace asianRace : asianRaceList) {
+                List<String> asnRaceList = new ArrayList<>();
                 if (officers.getOfficerId() == asianRace.getOfficerId()) {
-                    race.setPrimaryRaceType(asianRace.getPrimaryRaceType());
-                    race.setAsianRaceType(asianRace.getAsianRaceType());
-                    officers.setRaceDetails(race);
+                    String asnRace = asianRace.getAsianRace();
+                    asnRaceList.add(asnRace);
+                    officers.setAsianRaceType(asnRaceList);
                     officersList.add(officers);
                 }
             }
         }
-        return updateOfficersWithPrimaryRace.stream()
+        return officersWithPrimaryRaceList.stream()
                 .map(officers -> officersList.stream()
                         .filter(i -> i.getOfficerId()==(officers.getOfficerId()))
                         .findFirst().orElse(officers))
                 .collect(Collectors.toList());
-
     }
 
-    public List<ForceDetails> getUpdatedOfficersForceWithLocationTypeDetails(List<ForceDetails> updatedOfficersForceWithForceLocation, List<IncidentForceType> officersForceTypeDetails) {
-        List<ForceDetails> forceDetailsList = new ArrayList<>();
-        for (ForceDetails forceDetails : updatedOfficersForceWithForceLocation) {
-            List<String> forceType = new ArrayList<>();
-            for (IncidentForceType incidentForceType : officersForceTypeDetails) {
-                if (forceDetails.getForceId() == incidentForceType.getForceId()) {
-                    forceType.add(incidentForceType.getForceType());
-                    forceDetails.setForceType(forceType);
-                    forceDetailsList.add(forceDetails);
+    public List<Civilians> getUpdateCivilainsWithAsianRaceList(List<Civilians> civiliansWithPrimaryRaceDetails, List<AsianRace> asianRaceList)
+    {
+        List<Civilians> civiliansList1 = new ArrayList<>();
+        for (Civilians civilians : civiliansWithPrimaryRaceDetails) {
+            for (AsianRace asianRace : asianRaceList) {
+                List<String> asnRaceList = new ArrayList<>();
+                if (civilians.getCivilianId() == asianRace.getCivilianId()) {
+                    String asnRace = asianRace.getAsianRace();
+                    asnRaceList.add(asnRace);
+                    civilians.setAsianRaceType(asnRaceList);
+                    civiliansList1.add(civilians);
                 }
             }
         }
-        return forceDetailsList.stream().distinct().collect(Collectors.toList());
-    }
-
-    public List<ForceDetails> getUpdatedCivilianForceWithLocationTypeDetails(List<ForceDetails> updatedCivilianForceWithForceLocation, List<IncidentForceType> civilianForceTypeDetails) {
-        List<ForceDetails> forceDetailsList = new ArrayList<>();
-        for (ForceDetails forceDetails : updatedCivilianForceWithForceLocation) {
-            List<String> forceType = new ArrayList<>();
-            for (IncidentForceType incidentForceType : civilianForceTypeDetails) {
-                if (forceDetails.getForceId() == incidentForceType.getForceId()) {
-                    forceType.add(incidentForceType.getForceType());
-                    forceDetails.setForceType(forceType);
-                    forceDetailsList.add(forceDetails);
-                }
-            }
-        }
-        return forceDetailsList.stream().distinct().collect(Collectors.toList());
-    }
-
-    public List<ForceDetails> getOfficersForceWithForceLocation(List<ForceDetails> officersForceDetails, List<IncidentForceLocation> officersForceLocationDetails) {
-        List<ForceDetails> forceDetailsList = new ArrayList<>();
-        for (ForceDetails forceDetails : officersForceDetails) {
-            List<String> forceLocation = new ArrayList<>();
-            for (IncidentForceLocation incidentForceLocation : officersForceLocationDetails) {
-                if (forceDetails.getForceId() == incidentForceLocation.getForceId()) {
-                    forceLocation.add(incidentForceLocation.getForceLocation());
-                    forceDetails.setForceLocation(forceLocation);
-                    forceDetailsList.add(forceDetails);
-                }
-            }
-        }
-        return forceDetailsList.stream().distinct().collect(Collectors.toList());
-    }
-
-    public List<ForceDetails> getCivilianForceWithForceLocation(List<ForceDetails> civilianForceDetails, List<IncidentForceLocation> civilianForceLocationDetails) {
-        List<ForceDetails> forceDetailsList = new ArrayList<>();
-        for (ForceDetails forceDetails : civilianForceDetails) {
-            List<String> forceLocation = new ArrayList<>();
-            for (IncidentForceLocation incidentForceLocation : civilianForceLocationDetails) {
-                if (forceDetails.getForceId() == incidentForceLocation.getForceId()) {
-                    forceLocation.add(incidentForceLocation.getForceLocation());
-                    forceDetails.setForceLocation(forceLocation);
-                    forceDetailsList.add(forceDetails);
-                }
-            }
-        }
-        return forceDetailsList.stream().distinct().collect(Collectors.toList());
-    }
-
-    public List<Civilians> getUpdateCivilainsWithAsianRace(List<Civilians> civiliansList, List<Race> updatedCiviliansRaceWithCiviliansAsianRace) {
-        List<Civilians> civList = new ArrayList<>();
-        for (Civilians civilians : civiliansList) {
-                for (Race asianRace : updatedCiviliansRaceWithCiviliansAsianRace) {
-                    Race race = new Race();
-                    if (civilians.getCivilianId() == asianRace.getCivilainsId()) {
-                        race.setPrimaryRaceType(asianRace.getPrimaryRaceType());
-                        race.setAsianRaceType(asianRace.getAsianRaceType());
-                        civilians.setRaceDetails(race);
-                        civList.add(civilians);
-                    }
-                }
-        }
-        return civiliansList.stream()
-                .map(civilians -> civList.stream()
+        return civiliansWithPrimaryRaceDetails.stream()
+                .map(civilians -> civiliansList1.stream()
                         .filter(i -> i.getCivilianId()==(civilians.getCivilianId()))
                         .findFirst().orElse(civilians))
                 .collect(Collectors.toList());
     }
 
-    public List<Officers> getUpdateOfficersWithPrimaryRace(List<Officers> updatedOfficersWithInjuryDetails, List<Race> updateOfficersRaceWithOfficersPrimaryRace) {
-        List<Officers> officersList1 = new ArrayList<>();
-        for (Officers officers : updatedOfficersWithInjuryDetails) {
-            for (Race primaryRace : updateOfficersRaceWithOfficersPrimaryRace) {
-                Race race = new Race();
+    public List<Officers> getUpdateOfficersWithPrimaryRaceList(List<Officers> officersWithInjuryDetails, List<PrimaryRace> primaryRaceList)
+    {
+        List<Officers> officersList = new ArrayList<>();
+        for (Officers officers : officersWithInjuryDetails) {
+            for (PrimaryRace primaryRace : primaryRaceList) {
+                List<String> prmRaceList = new ArrayList<>();
                 if (officers.getOfficerId() == primaryRace.getOfficerId()) {
-                    race.setPrimaryRaceType(primaryRace.getPrimaryRaceType());
-                    officers.setRaceDetails(race);
-                    officersList1.add(officers);
+                    String primRace = primaryRace.getPrimaryRace();
+                    prmRaceList.add(primRace);
+                    officers.setPrimaryRaceType(prmRaceList);
+                    officersList.add(officers);
                 }
             }
         }
-        return updatedOfficersWithInjuryDetails.stream()
-                .map(officers -> officersList1.stream()
+        return officersWithInjuryDetails.stream()
+                .map(officers -> officersList.stream()
                         .filter(i -> i.getOfficerId()==(officers.getOfficerId()))
                         .findFirst().orElse(officers))
                 .collect(Collectors.toList());
     }
 
-    public List<Civilians> getUpdateCivilainsWithPrimaryRace(List<Civilians> civiliansList, List<Race> updatedCiviliansRaceWithCiviliansPrimaryRace) {
+
+    public List<Civilians> getUpdateCivilainsWithPrimaryRaceList(List<Civilians> civiliansList, List<PrimaryRace> updatedCiviliansRaceWithCiviliansPrimaryRace) {
         List<Civilians> civiliansList1 = new ArrayList<>();
         for (Civilians civilians : civiliansList) {
-            for (Race primaryRace : updatedCiviliansRaceWithCiviliansPrimaryRace) {
-                Race race = new Race();
-                if (civilians.getCivilianId() == primaryRace.getCivilainsId()) {
-                    race.setPrimaryRaceType(primaryRace.getPrimaryRaceType());
-                    civilians.setRaceDetails(race);
+            for (PrimaryRace primaryRace : updatedCiviliansRaceWithCiviliansPrimaryRace) {
+                List<String> primaryRaceList = new ArrayList<>();
+                if (civilians.getCivilianId() == primaryRace.getCivilianId()) {
+                    String primRace = primaryRace.getPrimaryRace();
+                    primaryRaceList.add(primRace);
+                    civilians.setPrimaryRaceType(primaryRaceList);
                     civiliansList1.add(civilians);
                 }
             }
@@ -897,19 +968,6 @@ public class IncidentDaoImpl implements IncidentDao {
                         .filter(i -> i.getCivilianId()==(civilians.getCivilianId()))
                         .findFirst().orElse(civilians))
                 .collect(Collectors.toList());
-    }
-
-
-    public List<String> getUpdatedCiviliansRaceWithCiviliansPrimaryRaceList(List<Civilians> civiliansList, List<Race> updatedCiviliansRaceWithCiviliansPrimaryRace) {
-        List<String> civiliansRaceWithPrimaryRaceList = new ArrayList<>();
-        for (Civilians civilians : civiliansList) {
-            for (Race primaryRace : updatedCiviliansRaceWithCiviliansPrimaryRace) {
-                if (civilians.getCivilianId() == primaryRace.getCivilainsId()) {
-                    civiliansRaceWithPrimaryRaceList.addAll(primaryRace.getPrimaryRaceType());
-                }
-            }
-        }
-        return civiliansRaceWithPrimaryRaceList;
     }
 
     public List<Officers> getUpdatedOfficersWithForceReason(List<ForceReason> forceReasonList, List<Officers> officersWithForceDetails) {
@@ -976,38 +1034,83 @@ public class IncidentDaoImpl implements IncidentDao {
                 .collect(Collectors.toList());
     }
 
-
-    public List<Officers> getUpdatedOfficersWithOfficersForceDetails(List<Officers> updateOfficersWithPrimaryRace, List<ForceDetails> updatedOfficersForceWithLocationTypeDetails) {
+    public List<Officers> getUpdateOfficersWithForceType(List<Officers> officersWithForceLocation, List<ForceType> forceTypeList)
+    {
         List<Officers> officersList = new ArrayList<>();
-        for (Officers officers : updateOfficersWithPrimaryRace) {
-            for (ForceDetails forceDetails : updatedOfficersForceWithLocationTypeDetails) {
-                if (forceDetails.getOfficerId() == officers.getOfficerId()) {
-                    officers.setForceDetails(forceDetails);
+        for (Officers officers : officersWithForceLocation) {
+            List<String> forceTypeLst = new ArrayList<>();
+            for (ForceType forceType : forceTypeList) {
+                if (officers.getOfficerId() == forceType.getOfficerId()) {
+                    forceTypeLst.add(forceType.getForceType());
+                    officers.setForceLocation(forceTypeLst);
                     officersList.add(officers);
                 }
             }
         }
-        return updateOfficersWithPrimaryRace.stream()
+        return officersWithForceLocation.stream()
                 .map(officers -> officersList.stream()
                         .filter(i -> i.getOfficerId() == (officers.getOfficerId()))
                         .findFirst().orElse(officers))
                 .collect(Collectors.toList());
     }
 
-    public List<Civilians> getUpdatedCiviliansWithCivilianForceDetails(List<Civilians> civiliansWithFireArmList, List<ForceDetails> updatedCivilianForceWithLocationTypeDetails) {
+    public List<Civilians> getUpdateCiviliansWithForceType(List<Civilians> civiliansWithForceLocation, List<ForceType> forceTypeList)
+    {
         List<Civilians> civiliansList = new ArrayList<>();
-        for (Civilians civilians : civiliansWithFireArmList) {
-            for (ForceDetails forceDetails : updatedCivilianForceWithLocationTypeDetails) {
-                if (forceDetails.getCivilianId() == civilians.getCivilianId()) {
-                    civilians.setForceDetails(forceDetails);
+        for (Civilians civilians : civiliansWithForceLocation) {
+            List<String> forceTypeLst = new ArrayList<>();
+            for (ForceType forceType : forceTypeList) {
+                if (civilians.getCivilianId() == forceType.getCivilianId()) {
+                    forceTypeLst.add(forceType.getForceType());
+                    civilians.setForceLocation(forceTypeLst);
                     civiliansList.add(civilians);
                 }
             }
         }
-        return civiliansWithFireArmList.stream()
-                .map(civilians -> civiliansList.stream()
-                        .filter(i -> i.getCivilianId() == (civilians.getCivilianId()))
-                        .findFirst().orElse(civilians))
+        return civiliansWithForceLocation.stream()
+                .map(person -> civiliansList.stream()
+                        .filter(i -> i.getCivilianId() == (person.getCivilianId()))
+                        .findFirst().orElse(person))
+                .collect(Collectors.toList());
+    }
+
+    public List<Officers> getUpdateOfficersWithForceLocation(List<Officers> officersWithHawaiianRaceList, List<ForceLocation> forceLocationList)
+    {
+        List<Officers> officersList = new ArrayList<>();
+        for (Officers  officers : officersWithHawaiianRaceList) {
+            List<String> forceLocList = new ArrayList<>();
+            for (ForceLocation forceLocation : forceLocationList) {
+                if (officers.getOfficerId() == forceLocation.getOfficerId()) {
+                    forceLocList.add(forceLocation.getForceLocation());
+                    officers.setForceLocation(forceLocList);
+                    officersList.add(officers);
+                }
+            }
+        }
+        return officersWithHawaiianRaceList.stream()
+                .map(officers -> officersList.stream()
+                        .filter(i -> i.getOfficerId() == (officers.getOfficerId()))
+                        .findFirst().orElse(officers))
+                .collect(Collectors.toList());
+    }
+
+    public List<Civilians> getUpdateCiviliansWithForceLocation(List<Civilians> civiliansWithFireArmDetails, List<ForceLocation> forceLocationList)
+    {
+        List<Civilians> civiliansList = new ArrayList<>();
+        for (Civilians civilians : civiliansWithFireArmDetails) {
+            List<String> forceLocList = new ArrayList<>();
+            for (ForceLocation forceLocation : forceLocationList) {
+                if (civilians.getCivilianId() == forceLocation.getCivilianId()) {
+                    forceLocList.add(forceLocation.getForceLocation());
+                    civilians.setForceLocation(forceLocList);
+                    civiliansList.add(civilians);
+                }
+            }
+        }
+        return civiliansWithFireArmDetails.stream()
+                .map(person -> civiliansList.stream()
+                        .filter(i -> i.getCivilianId() == (person.getCivilianId()))
+                        .findFirst().orElse(person))
                 .collect(Collectors.toList());
     }
 
@@ -1031,267 +1134,73 @@ public class IncidentDaoImpl implements IncidentDao {
                 .collect(Collectors.toList());
     }
 
-    public List<Officers> getUpdatedOfficersWithInjuryTypeForIncident(List<Officers> officersList, List<Injury> updatedOfficersInjuryList) {
-        List<Officers> officers = new ArrayList<>();
-        for (Officers officers1 : officersList) {
-            for (Injury injury : updatedOfficersInjuryList) {
-                if (officers1.getOfficerId() == injury.getOfficerId()) {
-                    officers1.setInjuryDetails(injury);
-                    officers.add(officers1);
-                }
-            }
-        }
-        return officersList.stream()
-                .map(officers1 -> officers.stream()
-                        .filter(i -> i.getOfficerId() == (officers1.getOfficerId()))
-                        .findFirst().orElse(officers1))
-                .collect(Collectors.toList());
+    public List<HawaiianPacificIslanderRace> getOfficersHawaiianRaceDetails(List<Officers> officersWithAsianRaceList)
+    {
+        List<Integer> officerIds = getOfficerIds(officersWithAsianRaceList);
+        List<HawaiianPacificIslanderRace> hawaiianPacificIslanderRaces = new ArrayList<>();
+        logger.info("officerids for hawaiian race:" + officerIds);
+        hawaiianPacificIslanderRaces = getOffHawaiianRaceDetails(officerIds);
+        logger.info("officers hawaiian race list :"+hawaiianPacificIslanderRaces);
+        return hawaiianPacificIslanderRaces;
     }
 
-    public List<Injury> getUpdatedCiviliansInjuryDetails(List<InjuryType> civiliansInjuryType, List<Injury> civilianInjuryList) {
-        List<Injury> injuryList = new ArrayList<>();
-        for (Injury injury : civilianInjuryList) // injurylist
-        {
-            List<String> injType = new ArrayList<>();
-            InjuryType injTyp = new InjuryType();
-            for (InjuryType injuryType : civiliansInjuryType) // injury type list
-            {
-                if (injury.getInjuryId() == injuryType.getInjuryId()) {
-                    injTyp.setInjuryType(injuryType.getInjuryType());
-                    injType.add(injuryType.getInjuryType());
-                    injury.setInjuryType(injType);
-                    injuryList.add(injury);
-                    continue;
-                }
-            }
-        }
-        return injuryList.stream().distinct().collect(Collectors.toList());
+    public List<HawaiianPacificIslanderRace> getCiviliansHawaiianRaceDetails(List<Civilians> civiliansWithAsianRaceDetails)
+    {
+        List<Integer> civilianIds = getCivilianIds(civiliansWithAsianRaceDetails);
+        List<HawaiianPacificIslanderRace> hawaiianPacificIslanderRaces = new ArrayList<>();
+        logger.info("civilianIds for hawaiian race:" + civilianIds);
+        hawaiianPacificIslanderRaces = getCivHawaiianRaceDetails(civilianIds);
+        logger.info("civilians hawaiian race list :"+hawaiianPacificIslanderRaces);
+        return hawaiianPacificIslanderRaces;
     }
 
-    public List<Race> getUpdatedOfficersRaceWithPrimaryRaceDetails(List<PrimaryRace> officersPrimaryRaceDetails, List<Race> officersRaceList) {
-        List<Race> raceList = new ArrayList<>();
-        for (Race race : officersRaceList) {
-            List<String> primaryRaceList = new ArrayList<>();
-            PrimaryRace primaryRace = new PrimaryRace();
-            for (PrimaryRace primaryRace1 : officersPrimaryRaceDetails) {
-                if (race.getRaceId() == primaryRace1.getRaceId()) {
-                    primaryRace.setPrimaryRace(primaryRace1.getPrimaryRace());
-                    primaryRaceList.add(primaryRace1.getPrimaryRace());
-                    race.setPrimaryRaceType(primaryRaceList);
-                    raceList.add(race);
-                    continue;
-                }
-            }
-        }
-        return raceList.stream().distinct().collect(Collectors.toList());
-    }
-
-    public List<Race> getUpdatedOfficersRaceWithHawaiianRaceDetails(List<HawaiianPacificIslanderRace> officersHawaiianRaceDetails, List<Race> officersRaceList) {
-        List<Race> raceList = new ArrayList<>();
-        for (Race race : officersRaceList) {
-            List<String> hawaiianPacificIslanderRaceList = new ArrayList<>();
-            HawaiianPacificIslanderRace hawaiianPacificIslanderRace = new HawaiianPacificIslanderRace();
-            for (HawaiianPacificIslanderRace hawaiianPacificIslanderRace1 : officersHawaiianRaceDetails) {
-                if (race.getRaceId() == hawaiianPacificIslanderRace1.getRaceId()) {
-                    hawaiianPacificIslanderRace.setHawaiianRace(hawaiianPacificIslanderRace1.getHawaiianRace());
-                    hawaiianPacificIslanderRaceList.add(hawaiianPacificIslanderRace1.getHawaiianRace());
-                    race.setHawaiianRaceType(hawaiianPacificIslanderRaceList);
-                    raceList.add(race);
-                    continue;
-                }
-            }
-        }
-        return raceList.stream().distinct().collect(Collectors.toList());
-    }
-
-    public List<Race> getUpdatedCiviliansRaceWithHawaiianRaceDetails(List<HawaiianPacificIslanderRace> civiliansHawaiianRaceDetails, List<Race> civilianRaceList) {
-        List<Race> raceList = new ArrayList<>();
-        for (Race race : civilianRaceList) {
-            if(race.getHawaiianRaceType()!=null) {
-                List<String> hawaiianPacificIslanderRaceList = new ArrayList<>();
-                HawaiianPacificIslanderRace hawaiianPacificIslanderRace = new HawaiianPacificIslanderRace();
-                for (HawaiianPacificIslanderRace hawaiianPacificIslanderRace1 : civiliansHawaiianRaceDetails) {
-                    if (race.getRaceId() == hawaiianPacificIslanderRace1.getRaceId()) {
-                        hawaiianPacificIslanderRace.setHawaiianRace(hawaiianPacificIslanderRace1.getHawaiianRace());
-                        hawaiianPacificIslanderRaceList.add(hawaiianPacificIslanderRace1.getHawaiianRace());
-                        race.setHawaiianRaceType(hawaiianPacificIslanderRaceList);
-                        raceList.add(race);
-                        continue;
-                    }
-                }
-            }
-        }
-        return raceList.stream().distinct().collect(Collectors.toList());
-    }
-
-    public List<Race> getUpdatedOfficersRaceWithAsianRaceDetails(List<AsianRace> officersAsianRaceDetails, List<Race> officersRaceList) {
-        List<Race> raceList = new ArrayList<>();
-        for (Race race : officersRaceList) {
-            List<String> asianRaceList = new ArrayList<>();
-            AsianRace asianRace = new AsianRace();
-            for (AsianRace asianRace1 : officersAsianRaceDetails) {
-                if (race.getRaceId() == asianRace1.getRaceId()) {
-                    asianRace.setAsianRace(asianRace1.getAsianRace());
-                    asianRaceList.add(asianRace1.getAsianRace());
-                    race.setAsianRaceType(asianRaceList);
-                    raceList.add(race);
-                    continue;
-                }
-            }
-        }
-        return raceList.stream().distinct().collect(Collectors.toList());
-    }
-
-    public List<Race> getUpdatedCiviliansRaceWithAsianRaceDetails(List<AsianRace> civiliansAsianRaceDetails, List<Race> civilianRaceList) {
-        List<Race> raceList = new ArrayList<>();
-        for (Race race : civilianRaceList) {
-            List<String> asianRaceList = new ArrayList<>();
-            AsianRace asianRace = new AsianRace();
-            for (AsianRace asianRace1 : civiliansAsianRaceDetails) {
-                if (race.getRaceId() == asianRace1.getRaceId()) {
-                    asianRace.setAsianRace(asianRace1.getAsianRace());
-                    asianRaceList.add(asianRace1.getAsianRace());
-                    race.setAsianRaceType(asianRaceList);
-                    raceList.add(race);
-                    continue;
-                }
-            }
-        }
-        return raceList.stream().distinct().collect(Collectors.toList());
-    }
-
-    public List<Race> getUpdatedCiviliansRaceWithPrimaryRaceDetails(List<PrimaryRace> civiliansPrimaryRaceDetails, List<Race> civilianRaceList) {
-        List<Race> raceList = new ArrayList<>();
-        for (Race race : civilianRaceList) {
-            List<String> primaryRaceList = new ArrayList<>();
-            PrimaryRace primaryRace = new PrimaryRace();
-            for (PrimaryRace primaryRace1 : civiliansPrimaryRaceDetails) {
-                if (race.getRaceId() == primaryRace1.getRaceId()) {
-                    primaryRace.setPrimaryRace(primaryRace1.getPrimaryRace());
-                    primaryRaceList.add(primaryRace1.getPrimaryRace());
-                    race.setPrimaryRaceType(primaryRaceList);
-                    raceList.add(race);
-                    continue;
-                }
-            }
-        }
-        return raceList.stream().distinct().collect(Collectors.toList());
-    }
-
-    public List<Injury> getUpdatedOfficersInjuryDetails(List<InjuryType> officersInjuryType, List<Injury> officersInjuryList) {
-        List<Injury> injuryList = new ArrayList<>();
-        for (Injury injury : officersInjuryList) // injurylist
-        {
-            List<String> injType = new ArrayList<>();
-            InjuryType injTyp = new InjuryType();
-            for (InjuryType injuryType : officersInjuryType) // injury type list
-            {
-                if (injury.getInjuryId() == injuryType.getInjuryId()) {
-                    injTyp.setInjuryType(injuryType.getInjuryType());
-                    injType.add(injuryType.getInjuryType());
-                    injury.setInjuryType(injType);
-                    injuryList.add(injury);
-                    continue;
-                }
-            }
-        }
-        return injuryList.stream().distinct().collect(Collectors.toList());
-    }
-
-    public List<PrimaryRace> getOfficersPrimaryRaceDetails(List<Race> officersRaceList) {
-        List<Integer> officerRaceIds = getOfficerRaceIds(officersRaceList);
-        logger.info("raceIds for officersRace:" + officerRaceIds);
-        return getCivPrimaryRaceDetails(officerRaceIds);
-    }
-
-    public List<AsianRace> getOfficersAsianRaceDetails(List<Race> officersRaceList) {
-        List<Integer> officersRaceIds = getCivilianRaceIds(officersRaceList);
-        logger.info("raceIds for OfficersAsianRaceDetails:" + officersRaceIds);
-        return getCivAsianRaceDetails(officersRaceIds);
-    }
-
-    public List<HawaiianPacificIslanderRace> getOfficersHawaiianRaceDetails(List<Race> officersRaceList) {
-        List<Integer> officersRaceIds = getCivilianRaceIds(officersRaceList);
-        logger.info("raceIds for OfficersHawaiianRaceDetails:" + officersRaceIds);
-        return getCivHawaiianRaceDetails(officersRaceIds);
-    }
-
-    public List<HawaiianPacificIslanderRace> getCiviliansHawaiianRaceDetails(List<Race> civilianRaceList) {
-        List<Integer> civilianRaceIds = getCivilianRaceIds(civilianRaceList);
-        logger.info("raceIds for CiviliansHawaiianRaceDetails:" + civilianRaceIds);
-        return getCivHawaiianRaceDetails(civilianRaceIds);
-    }
-
-    public List<AsianRace> getCiviliansAsianRaceDetails(List<Race> civilianRaceList) {
-        List<Integer> civilianRaceIds = getCivilianRaceIds(civilianRaceList);
-        logger.info("raceIds for getCiviliansAsianRaceDetails:" + civilianRaceIds);
-        return getCivAsianRaceDetails(civilianRaceIds);
-    }
-
-    public List<PrimaryRace> getCiviliansPrimaryRaceDetails(List<Race> civilianRaceList) {
-        List<Integer> civilianRaceIds = getCivilianRaceIds(civilianRaceList);
-        logger.info("raceIds for civiliansRace:" + civilianRaceIds);
-        return getCivPrimaryRaceDetails(civilianRaceIds);
-    }
-
-    public List<InjuryType> getCiviliansInjuriesWithInjuryType(List<Injury> civilianInjuryList) {
-        List<Integer> injuryIds = getInjuryIds(civilianInjuryList);
-        logger.info("injuryIds for civilains injury :" + injuryIds);
-        return getOfficersInjuryType(injuryIds);
-    }
-
-    public List<InjuryType> getOfficersInjuriesWithInjuryType(List<Injury> officersInjuryList) {
-        List<Integer> injuryIds = getInjuryIds(officersInjuryList);
-        logger.info(" injuryIds for officers injury :" + injuryIds);
-        return getOfficersInjuryType(injuryIds);
-    }
-
-    public List<Injury> getOfficeresInjuryDetails(List<Officers> officersList) {
-        List<Integer> officerIds = getOfficerIds(officersList);
-        return getInjuryListForOfficersInIncident(officerIds);
-    }
-
-    public List<Race> getOfficeresRaceDetails(List<Officers> officersList) {
-        List<Integer> officerIds = getOfficerIds(officersList);
-        logger.info("officerIds of Race:" + officerIds);
-        return getUpdatedOfficersRaceDetailsWithRaceId(officerIds);
-    }
-
-    public List<Race> getCiviliansRaceDetails(List<Civilians> civiliansList) {
+    public List<AsianRace> getCiviliansAsianRaceDetails(List<Civilians> civiliansList)
+    {
         List<Integer> civilianIds = getCivilianIds(civiliansList);
-        logger.info("civilianIds for Race:" + civilianIds);
-        return getUpdatedCivilianRaceDetailsWithRaceId(civilianIds);
+        List<AsianRace> asianRaceList = new ArrayList<>();
+        logger.info("civilianIds for asian race:" + civilianIds);
+        asianRaceList = getCivAsianRaceDetails(civilianIds);
+        logger.info("civilians primary race list :"+asianRaceList);
+        return asianRaceList;
     }
 
-    public List<Injury> getCiviliansInjuryDetails(List<Civilians> civilianIdList) {
+    public List<AsianRace> getOfficersAsianRaceDetails(List<Officers> officersWithPrimaryRaceList)
+    {
+        List<Integer> officerIds = getOfficerIds(officersWithPrimaryRaceList);
+        logger.info(" officerIds for asian race :"+officerIds);
+        List<AsianRace> asianRaceList = getOffAsianRaceDetails(officerIds);
+        logger.info("officers asian race details :"+asianRaceList);
+        return asianRaceList;
+    }
+
+
+    public List<PrimaryRace> getOfficersPrimaryRaceDetails(List<Officers> officersWithInjuryDetails)
+    {
+        List<Integer> officerIds = getOfficerIds(officersWithInjuryDetails);
+        logger.info(" officerIds for primaryrace :"+officerIds);
+        List<PrimaryRace> primaryRaceList = getOffPrimaryRaceDetails(officerIds);
+        logger.info("officers primary race details :"+primaryRaceList);
+        return primaryRaceList;
+    }
+
+
+    public List<PrimaryRace> getCiviliansPrimaryRaceDetails(List<Civilians> civiliansList) {
+        List<Integer> civilianIds = getCivilianIds(civiliansList);
+        List<PrimaryRace> primaryRaceList = new ArrayList<>();
+        logger.info("civilianIds for Race:" + civilianIds);
+        primaryRaceList = getCivPrimaryRaceDetails(civilianIds);
+        logger.info("civilians primary race list :"+primaryRaceList);
+        return primaryRaceList;
+    }
+
+    public List<InjuryType> getCiviliansInjuryDetails(List<Civilians> civilianIdList) {
         List<Integer> civilianIds = getCivilianIds(civilianIdList);
         return getInjuryListForCiviliansInIncident(civilianIds);
     }
 
-    public List<Integer> getOfficerRaceIds(List<Race> officersRaceList) {
-        List<Integer> raceIds = new ArrayList<>();
-        for (Race race : officersRaceList) {
-            raceIds.add(race.getRaceId());
-        }
-        return raceIds;
-    }
-
-    public List<Integer> getCivilianRaceIds(List<Race> civilianRaceList) {
-        logger.info("civilianRaceList for getCivilianRaceIds:" + civilianRaceList);
-        List<Integer> raceIds = new ArrayList<>();
-        for (Race race : civilianRaceList) {
-            raceIds.add(race.getRaceId());
-        }
-        return raceIds;
-    }
-
-    public List<Integer> getInjuryIds(List<Injury> officersInjuryList) {
-        logger.info("officersInjuryList for getInjuryIds:" + officersInjuryList);
-        List<Integer> injuryIds = new ArrayList<>();
-        for (Injury injury : officersInjuryList) {
-            injuryIds.add(injury.getInjuryId());
-        }
-        return injuryIds;
+    public List<InjuryType> getOfficersInjuriesWithInjuryType(List<Officers> officersList) {
+        List<Integer> officerIds = getOfficerIds(officersList);
+        return getInjuryListForOfficersInIncident(officerIds);
     }
 
     public List<Integer> getOfficerIds(List<Officers> officersList) {
@@ -1300,14 +1209,6 @@ public class IncidentDaoImpl implements IncidentDao {
             OfficerIds.add(officers.getOfficerId());
         }
         return OfficerIds;
-    }
-
-    public List<Integer> getCivilianForceIds(List<ForceDetails> civilianForceDetails) {
-        List<Integer> civilianForceIds = new ArrayList<>();
-        for (ForceDetails forceDetails : civilianForceDetails) {
-            civilianForceIds.add(forceDetails.getForceId());
-        }
-        return civilianForceIds;
     }
 
     public List<Integer> getCivilianIds(List<Civilians> civilianIdList) {
@@ -1333,19 +1234,6 @@ public class IncidentDaoImpl implements IncidentDao {
         return officerCiviliansLit;
     }
 
-    public List<Civilians> getUpdatedCiviliansWithInjuryForIncident(List<Civilians> civilianInIncident, List<Civilians> civiliansList) {
-        List<Civilians> civilians = new ArrayList<>();
-        for (Civilians civilians1 : civiliansList) {
-            for (Civilians civilians2 : civilianInIncident) {
-                if (civilians1.getCivilianNumber() == civilians2.getCivilianNumber()) {
-                    civilians1.setCivilianId(civilians2.getCivilianId());
-                    civilians.add(civilians1);
-                }
-            }
-        }
-        return civilians;
-    }
-
     public List<Civilians> getUpdatedCivilianForIncident(List<Civilians> civilianInIncident, List<Civilians> civiliansList) {
         List<Civilians> civilians = new ArrayList<>();
         for (Civilians civilians1 : civiliansList) {
@@ -1357,19 +1245,6 @@ public class IncidentDaoImpl implements IncidentDao {
             }
         }
         return civilians;
-    }
-
-    public List<Officers> getUpdatedOfficersWithInjuryForIncident(List<Officers> officersInIncident, List<Officers> officersList) {
-        List<Officers> officers = new ArrayList<>();
-        for (Officers officers1 : officersList) {
-            for (Officers officers2 : officersInIncident) {
-                if (officers1.getOfficerOrder() == officers2.getOfficerOrder()) {
-                    officers1.setOfficerId(officers2.getOfficerId());
-                    officers.add(officers1);
-                }
-            }
-        }
-        return officers;
     }
 
     public List<Officers> getUpdatedOfficersForIncident(List<Officers> officersInIncident, List<Officers> officersList) {
@@ -1398,82 +1273,6 @@ public class IncidentDaoImpl implements IncidentDao {
             }
         }
         return forceReasonList;
-    }
-
-    public List<Race> getOfficersRaceDetailsOfIncident(List<OfficerCivilians> officerCivilians, List<Officers> officers) {
-        List<Race> raceList = new ArrayList<>();
-        for (OfficerCivilians offCiv : officerCivilians) {
-            for (Officers officers1 : officers) {
-                if ((officers1.getOfficerId() == offCiv.getOfficerId()) && (officers1.getRaceDetails() != null)) {
-                    Race race = new Race();
-                    race.setOfficerId(officers1.getOfficerId());
-                    race.setCivilainsId(offCiv.getCivilianId());
-                    race.setRaceOf("O");
-                    race.setPrimaryRaceType(officers1.getRaceDetails().getPrimaryRaceType());
-                    race.setAsianRaceType(officers1.getRaceDetails().getAsianRaceType());
-                    race.setHawaiianRaceType(officers1.getRaceDetails().getHawaiianRaceType());
-                    raceList.add(race);
-                }
-            }
-        }
-        return raceList;
-    }
-
-    public List<ForceDetails> getForceDetailsOfOfficersInIncident(List<OfficerCivilians> officerCivilians, List<Officers> officers) {
-        List<ForceDetails> forceDetails = new ArrayList<>();
-        for (OfficerCivilians offCiv : officerCivilians) {
-            for (Officers officers1 : officers) {
-                if ((officers1.getOfficerId() == offCiv.getOfficerId()) && (officers1.getForceDetails() != null)) {
-                    ForceDetails details = new ForceDetails();
-                    details.setForceLocation(officers1.getForceDetails().getForceLocation());
-                    details.setForceType(officers1.getForceDetails().getForceType());
-                    details.setOfficerId(officers1.getOfficerId());
-                    details.setCivilianId(offCiv.getCivilianId());
-                    details.setForceOn("O");
-                    forceDetails.add(details);
-                }
-            }
-        }
-        return forceDetails.stream().distinct().collect(Collectors.toList());
-
-    }
-
-    public List<Injury> getOfficersInjuryList(List<OfficerCivilians> officerCivilians, List<Officers> officers) {
-        List<Injury> injuryList = new ArrayList<>();
-        for (OfficerCivilians offCiv : officerCivilians) {
-            for (Officers officers1 : officers) {
-                if ((officers1.getOfficerId() == offCiv.getOfficerId()) && (officers1.getInjuryDetails() != null)) {
-                    Injury injury = new Injury();
-                    injury.setInjuryMedicalAid(officers1.getInjuryDetails().getInjuryMedicalAid());
-                    injury.setInjuryLevel(officers1.getInjuryDetails().getInjuryLevel());
-                    injury.setInjuryType(officers1.getInjuryDetails().getInjuryType());
-                    injury.setOfficerId(officers1.getOfficerId());
-                    injury.setCivilianId(offCiv.getCivilianId());
-                    injury.setInjuryOffCiv("O");
-                    injuryList.add(injury);
-                }
-            }
-        }
-        return injuryList;
-    }
-
-    public List<Injury> getCiviliansInjuryList(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1) {
-        List<Injury> injuryList = new ArrayList<>();
-        for (OfficerCivilians offCiv : officerCivilians) {
-            for (Civilians civilians : civiliansList1) {
-                if ((civilians.getCivilianId() == offCiv.getCivilianId()) && (civilians.getRaceDetails() != null)) {
-                    Injury injury = new Injury();
-                    injury.setInjuryMedicalAid(civilians.getInjuryDetails().getInjuryMedicalAid());
-                    injury.setInjuryLevel(civilians.getInjuryDetails().getInjuryLevel());
-                    injury.setInjuryType(civilians.getInjuryDetails().getInjuryType());
-                    injury.setCivilianId(civilians.getCivilianId());
-                    injury.setOfficerId(offCiv.getOfficerId());
-                    injury.setInjuryOffCiv("C");
-                    injuryList.add(injury);
-                }
-            }
-        }
-        return injuryList;
     }
 
     public List<ResistanceType> getResistanceTypeList(List<Civilians> civiliansList1) {
@@ -1523,41 +1322,140 @@ public class IncidentDaoImpl implements IncidentDao {
         return perceivedWeaponTypeList;
     }
 
-    public List<Race> getCiviliansRaceList(List<OfficerCivilians> officerCivilians, List<Civilians> civiliansList1) {
-        List<Race> raceList = new ArrayList<>();
+    public List<InjuryType> getOfficersInjuryTypeList(List<OfficerCivilians> officerCivilians, List<Officers> officersList)
+    {
+        List<InjuryType>  injuryTypeList = new ArrayList<>();
         for (OfficerCivilians offCiv : officerCivilians) {
-            for (Civilians civilians : civiliansList1) {
-                if ((civilians.getCivilianId() == offCiv.getCivilianId()) && (civilians.getRaceDetails() != null)) {
-                    Race race = new Race();
-                    race.setCivilainsId(civilians.getCivilianId());
-                    race.setOfficerId(offCiv.getOfficerId());
-                    race.setAsianRaceType(civilians.getRaceDetails().getAsianRaceType());
-                    race.setPrimaryRaceType(civilians.getRaceDetails().getPrimaryRaceType());
-                    race.setHawaiianRaceType(civilians.getRaceDetails().getHawaiianRaceType());
-                    race.setRaceOf("C");
-                    raceList.add(race);
+            for (Officers officers : officersList) {
+                if ((officers.getOfficerId() == offCiv.getOfficerId()) && (officers.getInjuryType() != null)) {
+                    for(String injType : officers.getInjuryType())
+                    {
+                        InjuryType injuryType = new InjuryType();
+                        injuryType.setInjuryType(injType);
+                        injuryType.setOfficerId(officers.getOfficerId());
+                        injuryType.setInjutyTypeOn("O");
+                        injuryType.setCivilianId(offCiv.getCivilianId());
+                        injuryTypeList.add(injuryType);
+                    }
+
                 }
             }
         }
-        return raceList;
+        return injuryTypeList.stream().distinct().collect(Collectors.toList());
     }
 
-    public List<ForceDetails> getForceDetailsOfCiviliansInIncident(List<OfficerCivilians> officerCivilians, List<Civilians> civilianInIncident) {
-        List<ForceDetails> forceDetails = new ArrayList<>();
+    public List<ForceType> getForceTypeDetailsOfOfficers(List<OfficerCivilians> officerCivilians, List<Officers> officersList)
+    {
+        List<ForceType> forceTypeList = new ArrayList<>();
         for (OfficerCivilians offCiv : officerCivilians) {
-            for (Civilians civilians : civilianInIncident) {
-                if ((civilians.getCivilianId() == offCiv.getCivilianId()) && (civilians.getForceDetails() != null)) {
-                    ForceDetails details = new ForceDetails();
-                    details.setForceLocation(civilians.getForceDetails().getForceLocation());
-                    details.setForceType(civilians.getForceDetails().getForceType());
-                    details.setCivilianId(civilians.getCivilianId());
-                    details.setOfficerId(offCiv.getOfficerId());
-                    details.setForceOn("C");
-                    forceDetails.add(details);
+            for (Officers officers : officersList) {
+                if ((officers.getOfficerId() == offCiv.getOfficerId()) && (officers.getForceLocation() != null)) {
+                    for(String forType : officers.getForceLocation())
+                    {
+                        ForceType forceType = new ForceType();
+                        forceType.setForceType(forType);
+                        forceType.setOfficerId(officers.getOfficerId());
+                        forceType.setForceOn("O");
+                        forceType.setCivilianId(offCiv.getCivilianId());
+                        forceTypeList.add(forceType);
+                    }
+
                 }
             }
         }
-        return forceDetails.stream().distinct().collect(Collectors.toList());
+        //return forceLocationList;
+        return forceTypeList.stream().distinct().collect(Collectors.toList());
+    }
+
+    public List<ForceLocation> getForceLocationDetailsOfOfficers(List<OfficerCivilians> officerCivilians, List<Officers> officersList)
+    {
+        List<ForceLocation> forceLocationList = new ArrayList<>();
+        for (OfficerCivilians offCiv : officerCivilians) {
+            for (Officers officers : officersList) {
+                if ((officers.getOfficerId() == offCiv.getOfficerId()) && (officers.getForceLocation() != null)) {
+                    for(String forceLoc : officers.getForceLocation())
+                    {
+                        ForceLocation forceLocation = new ForceLocation();
+                        forceLocation.setForceLocation(forceLoc);
+                        forceLocation.setOfficerId(officers.getOfficerId());
+                        forceLocation.setForceOn("O");
+                        forceLocation.setCivilianId(offCiv.getCivilianId());
+                        forceLocationList.add(forceLocation);
+                    }
+
+                }
+            }
+        }
+        //return forceLocationList;
+        return forceLocationList.stream().distinct().collect(Collectors.toList());
+    }
+
+    public List<InjuryType>  getCiviliansInjuryTypeList(List<OfficerCivilians> officerCivilians, List<Civilians> civilianInIncident)
+    {
+        List<InjuryType> injuryTypeList = new ArrayList<>();
+        for (OfficerCivilians offCiv : officerCivilians) {
+            for (Civilians civilians : civilianInIncident) {
+                if ((civilians.getCivilianId() == offCiv.getCivilianId()) && (civilians.getInjuryType() != null)) {
+                    for(String injType : civilians.getInjuryType())
+                    {
+                        InjuryType injuryType = new InjuryType();
+                        injuryType.setCivilianId(civilians.getCivilianId());
+                        injuryType.setInjutyTypeOn("C");
+                        injuryType.setOfficerId(offCiv.getOfficerId());
+                        injuryType.setInjuryType(injType);
+                        injuryTypeList.add(injuryType);
+                    }
+
+                }
+            }
+        }
+        return injuryTypeList.stream().distinct().collect(Collectors.toList());
+    }
+
+    public List<ForceType> getForceTypeDetailsOfCivilians(List<OfficerCivilians> officerCivilians, List<Civilians> civilianInIncident)
+    {
+        List<ForceType>  forceTypeList = new ArrayList<>();
+        for (OfficerCivilians offCiv : officerCivilians) {
+            for (Civilians civilians : civilianInIncident) {
+                if ((civilians.getCivilianId() == offCiv.getCivilianId()) && (civilians.getForceType() != null)) {
+                    for(String forType : civilians.getForceType())
+                    {
+                        ForceType forceType = new ForceType();
+                        forceType.setCivilianId(civilians.getCivilianId());
+                        forceType.setForceOn("C");
+                        forceType.setOfficerId(offCiv.getOfficerId());
+                        forceType.setForceType(forType);
+                        forceTypeList.add(forceType);
+                    }
+
+                }
+            }
+        }
+        //return forceTypeList;
+        return forceTypeList.stream().distinct().collect(Collectors.toList());
+    }
+
+    public List<ForceLocation> getForceLocationDetailsOfCivilians(List<OfficerCivilians> officerCivilians, List<Civilians> civilianInIncident)
+    {
+        List<ForceLocation> forceLocationList = new ArrayList<>();
+        for (OfficerCivilians offCiv : officerCivilians) {
+            for (Civilians civilians : civilianInIncident) {
+                if ((civilians.getCivilianId() == offCiv.getCivilianId()) && (civilians.getForceLocation() != null)) {
+                    for(String forceLoc : civilians.getForceLocation())
+                    {
+                        ForceLocation forceLocation = new ForceLocation();
+                        forceLocation.setCivilianId(civilians.getCivilianId());
+                        forceLocation.setForceOn("C");
+                        forceLocation.setOfficerId(offCiv.getOfficerId());
+                        forceLocation.setForceLocation(forceLoc);
+                        forceLocationList.add(forceLocation);
+                    }
+
+                }
+            }
+        }
+        //return forceLocationList;
+       return forceLocationList.stream().distinct().collect(Collectors.toList());
     }
 
     public List<FireArm> getFireArmListInIncident(List<Civilians> civiliansList1) {
@@ -1576,26 +1474,26 @@ public class IncidentDaoImpl implements IncidentDao {
     }
 
 
-    public List<IncidentLocation> getIncidentLocationListDetails(int incidentId) {
-        List<IncidentLocation> locationList = new ArrayList<>();
+    public List<Address> getIncidentAddressDetails(int incidentId) {
+        List<Address> addressList = new ArrayList<>();
         try {
-            locationList = jdbcTemplate.query(
+            addressList = jdbcTemplate.query(
                     incidentSql.GET_INCIDENT_LOCATION, new Object[]{incidentId},
                     new IncidentLocationRowMapper());
         } catch (DataAccessException e) {
             e.printStackTrace();
         }
-        return locationList;
+        return addressList;
     }
 
-    public IncidentCoreDetails getIncidentCoreDetails(int incidentId) {
-        IncidentCoreDetails incidentCoreDetails = new IncidentCoreDetails();
+    public Incident getIncidentBasicDetails(int incidentId) {
+        Incident incident = new Incident();
         try {
-            incidentCoreDetails = (IncidentCoreDetails) jdbcTemplate.queryForObject(incidentSql.GET_INCIDENT_CORE_DETAILS, new Object[]{incidentId}, new IncidentRowMapper());
+            incident = (Incident) jdbcTemplate.queryForObject(incidentSql.GET_INCIDENT_CORE_DETAILS, new Object[]{incidentId}, new IncidentRowMapper());
         } catch (DataAccessException e) {
             e.printStackTrace();
         }
-        return incidentCoreDetails;
+        return incident;
     }
 
     public List<Officers> getOfficrsForIncident(int incidentId) {
@@ -1653,56 +1551,6 @@ public class IncidentDaoImpl implements IncidentDao {
         return civiliansList;
     }
 
-    public List<Integer> getCivilianIdForIncident(int incidentId) {
-        List<Integer> civilianId = new ArrayList<>();
-        civilianId = jdbcTemplate.queryForList(incidentSql.GET_CIV_IDS, new Object[]{incidentId}, Integer.class);
-        return civilianId;
-    }
-
-    public List<Integer> getOfficersIdForIncident(int incidentId) {
-        List<Integer> officersId = new ArrayList<>();
-        try {
-            officersId = jdbcTemplate.queryForList(incidentSql.GET_OFF_IDS, new Object[]{incidentId}, Integer.class);
-        } catch (DataAccessException e) {
-            e.printStackTrace();
-        }
-        return officersId;
-    }
-
-    public List<Civilians> submitFireArmsUsedInIncident(List<Civilians> civiliansList, List<Integer> civilianId) {
-        int civId = 0;
-        List<Civilians> civList = new ArrayList<>();
-        for (Civilians civilians : civiliansList) {
-            for (int i = 0; i < civilianId.size(); i++) {
-                civId = civilianId.get(i);
-                Civilians civilian = new Civilians();
-                civilian.setCivilianId(civId);
-                civilian.setFireArms(civilians.getFireArms());
-                civList.add(civilian);
-                break;
-            }
-        }
-        return civList;
-    }
-
-     public List<Injury> getInjuryDetailsOfOfficerInIncident(List<OfficerCivilians> officerCiviliansList, List<Officers> officersUpdateWithInuryList) {
-        List<Injury> injuryList = new ArrayList<>();
-        for (OfficerCivilians officerCivilians : officerCiviliansList) {
-            for (Officers officers : officersUpdateWithInuryList) {
-                Injury injury = new Injury();
-                if ((officers.getOfficerId() == officerCivilians.getOfficerId()) && (officers.getInjuryDetails() != null)) {
-                    injury.setInjuryLevel(officers.getInjuryDetails().getInjuryLevel());
-                    injury.setInjuryMedicalAid(officers.getInjuryDetails().getInjuryMedicalAid());
-                    injury.setInjuryType(officers.getInjuryDetails().getInjuryType());
-                    injury.setOfficerId(officers.getOfficerId());
-                    injury.setCivilianId(officerCivilians.getCivilianId());
-                    injuryList.add(injury);
-                }
-            }
-        }
-        return injuryList;
-    }
-
     private static <T> Predicate<T> distinctByKeys(Function<? super T, ?>... keyExtractors) {
         final Map<List<?>, Boolean> seen = new ConcurrentHashMap<>();
         return t ->
@@ -1715,266 +1563,46 @@ public class IncidentDaoImpl implements IncidentDao {
         };
     }
 
-    public List<Injury> getInjuryDetailsOfCivlianInIncident(List<OfficerCivilians> officerCiviliansList, List<Civilians> civiliansUpdateWithInuryList) {
-        List<Injury> injuryList = new ArrayList<>();
-        for (OfficerCivilians officerCivilians : officerCiviliansList) {
-            for (Civilians civilians : civiliansUpdateWithInuryList) {
-                Injury injury = new Injury();
-                if ((civilians.getCivilianId() == officerCivilians.getCivilianId()) && (civilians.getInjuryDetails() != null)) {
-                    injury.setInjuryLevel(civilians.getInjuryDetails().getInjuryLevel());
-                    injury.setInjuryMedicalAid(civilians.getInjuryDetails().getInjuryMedicalAid());
-                    injury.setInjuryType(civilians.getInjuryDetails().getInjuryType());
-                    injury.setCivilianId(civilians.getCivilianId());
-                    injury.setOfficerId(officerCivilians.getOfficerId());
-                    injuryList.add(injury);
-                }
-            }
-        }
-        return injuryList;
-    }
 
-    public List<IncidentForceType> getIncidentForceTypeList(List<ForceDetails> civilainForceDetails) {
-        List<IncidentForceType> incidentForceTypeList = new ArrayList<>();
-        for (ForceDetails details : civilainForceDetails) {
-            for (String type : details.getForceType()) {
-                IncidentForceType incidentForceType = new IncidentForceType();
-                incidentForceType.setForceId(details.getForceId());
-                incidentForceType.setForceType(type);
-                incidentForceTypeList.add(incidentForceType);
-            }
-        }
-        return incidentForceTypeList;
-    }
-
-    public List<HawaiianPacificIslanderRace> getIncidentHawaiianRaceList(List<Race> updatedRaceDetails) {
-        List<HawaiianPacificIslanderRace> hawaiianRaceList = new ArrayList<>();
-        for (Race race : updatedRaceDetails) {
-            if (race.getHawaiianRaceType() != null) {
-                for (String hawaiianRace : race.getHawaiianRaceType()) {
-                    HawaiianPacificIslanderRace hawaiianPacificIslanderRace = new HawaiianPacificIslanderRace();
-                    hawaiianPacificIslanderRace.setHawaiianRace(hawaiianRace);
-                    hawaiianPacificIslanderRace.setRaceId(race.getRaceId());
-                    hawaiianRaceList.add(hawaiianPacificIslanderRace);
-                }
-            }
-        }
-        return hawaiianRaceList;
-    }
-
-    public List<AsianRace> getIncidentAsianRaceList(List<Race> updatedRaceDetails) {
-        List<AsianRace> asianRaceList = new ArrayList<>();
-        for (Race race : updatedRaceDetails) {
-            if (race.getAsianRaceType() != null) {
-                for (String asianRace : race.getAsianRaceType()) {
-                    AsianRace asianRace1 = new AsianRace();
-                    asianRace1.setAsianRace(asianRace);
-                    asianRace1.setRaceId(race.getRaceId());
-                    asianRaceList.add(asianRace1);
-                }
-            }
-        }
-        return asianRaceList;
-    }
-
-    public List<InjuryType> getIncidentInjuryTypeList(List<Injury> updatedInjuryDetails) {
-        List<InjuryType> injuryTypeList = new ArrayList<>();
-        for (Injury injury : updatedInjuryDetails) {
-            if (injury.getInjuryType() != null) {
-                for (String injuryType : injury.getInjuryType()) {
-                    InjuryType type = new InjuryType();
-                    type.setInjuryType(injuryType);
-                    type.setInjuryId(injury.getInjuryId());
-                    injuryTypeList.add(type);
-                }
-            }
-        }
-        return injuryTypeList;
-    }
-
-    public List<PrimaryRace> getIncidentPrimayRaceList(List<Race> updatedRaceDetails) {
-        List<PrimaryRace> primaryRaceList = new ArrayList<>();
-        for (Race race : updatedRaceDetails) {
-            for (String primaryRaceType : race.getPrimaryRaceType()) {
-                PrimaryRace primaryRace = new PrimaryRace();
-                primaryRace.setPrimaryRace(primaryRaceType);
-                primaryRace.setRaceId(race.getRaceId());
-                primaryRaceList.add(primaryRace);
-            }
-        }
-        return primaryRaceList;
-    }
-
-    public List<IncidentForceLocation> getIncidentOfficersForceDetails(List<ForceDetails> officersForceDetails)
+    public List<InjuryType> getInjuryListForOfficersInIncident(List<Integer> officerIds)
     {
-        List<ForceDetails> distinctOfficersForceDetails = new ArrayList<>();
-        List<IncidentForceLocation> incidentForceLocationList = new ArrayList<>();
+        List<InjuryType> injuryTypeDetails = new ArrayList<>();
         try {
-            distinctOfficersForceDetails = officersForceDetails.stream()
-                    .filter(p -> p.getForceOn().equals("O"))
-                    .filter( distinctByKeys(p -> p.getOfficerId()) )
-                    .collect( Collectors.toList() );
-            for (ForceDetails details : distinctOfficersForceDetails) {
-                    for (String location : details.getForceLocation()) {
-                        IncidentForceLocation incidentForceLocation = new IncidentForceLocation();
-                        incidentForceLocation.setForceId(details.getForceId());
-                        incidentForceLocation.setForceLocation(location);
-                        incidentForceLocationList.add(incidentForceLocation);
-                    }
-            }
-        } catch (Exception e) {
+            String inParams = officerIds.stream()
+                    .map(Object::toString)
+                    .collect(Collectors.joining(","));
+            injuryTypeDetails = jdbcTemplate.query(String.format(incidentSql.GET_OFF_INJURY_TYPE, inParams), new InjuryTypeRowMapper());
+        } catch (DataAccessException e) {
             e.printStackTrace();
         }
-        return incidentForceLocationList;
+        return injuryTypeDetails;
     }
 
-    public List<IncidentForceType> getIncidentOfficersForceTypeDetails(List<ForceDetails> civilainForceDetails)
-    {
-        List<ForceDetails> distinctCivilianForceDetails;
-        List<IncidentForceType> incidentForceTypeList = new ArrayList<>();
-        try {
-            distinctCivilianForceDetails = civilainForceDetails.stream()
-                    .filter(p -> p.getForceOn().equals("O"))
-                    .filter( distinctByKeys(p -> p.getOfficerId()) )
-                    .collect( Collectors.toList() );
-            for (ForceDetails details : distinctCivilianForceDetails) {
-                for (String type : details.getForceType()) {
-                    IncidentForceType incidentForceType = new IncidentForceType();
-                    incidentForceType.setForceId(details.getForceId());
-                    incidentForceType.setForceType(type);
-                    incidentForceTypeList.add(incidentForceType);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return incidentForceTypeList;
-    }
-
-    public List<IncidentForceType> getIncidentCiviliansForceTypeDetails(List<ForceDetails> civilainForceDetails)
-    {
-        List<IncidentForceType> incidentForceTypeList = new ArrayList<>();
-        try {
-            List<ForceDetails> distinctCivilianForceDetails = civilainForceDetails.stream()
-                    .filter(p -> p.getForceOn().equals("C"))
-                    .filter( distinctByKeys(p -> p.getCivilianId()) )
-                    .collect( Collectors.toList() );
-            for (ForceDetails details : distinctCivilianForceDetails) {
-                for (String type : details.getForceType()) {
-                    IncidentForceType incidentForceType = new IncidentForceType();
-                    incidentForceType.setForceId(details.getForceId());
-                    incidentForceType.setForceType(type);
-                    incidentForceTypeList.add(incidentForceType);
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return incidentForceTypeList;
-    }
-
-    public List<IncidentForceLocation> getIncidentCiviliansForceDetails(List<ForceDetails> civilainForceDetails)
-    {
-        List<IncidentForceLocation> incidentForceLocationList = new ArrayList<>();
-        try {
-            List<ForceDetails> distinctCivilianForceDetails = civilainForceDetails.stream()
-                    .filter(p -> p.getForceOn().equals("C"))
-                    .filter( distinctByKeys(p -> p.getCivilianId()) )
-                    .collect( Collectors.toList() );
-            for (ForceDetails details : distinctCivilianForceDetails) {
-                    for (String location : details.getForceLocation()) {
-                        IncidentForceLocation incidentForceLocation = new IncidentForceLocation();
-                        incidentForceLocation.setForceId(details.getForceId());
-                        incidentForceLocation.setForceLocation(location);
-                        incidentForceLocationList.add(incidentForceLocation);
-                    }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return incidentForceLocationList;
-    }
-
-
-    public List<IncidentForceLocation> getIncidentForceLocationList(List<ForceDetails> civilainForceDetails) {
-        List<IncidentForceLocation> incidentForceLocationList = new ArrayList<>();
-        for (ForceDetails details : civilainForceDetails) {
-            for (String location : details.getForceLocation()) {
-                IncidentForceLocation incidentForceLocation = new IncidentForceLocation();
-                incidentForceLocation.setForceId(details.getForceId());
-                incidentForceLocation.setForceLocation(location);
-                incidentForceLocationList.add(incidentForceLocation);
-            }
-        }
-        return incidentForceLocationList;
-    }
-
-    public List<Injury> getUpdatedInjuryDetails(List<Injury> injuryList, List<Injury> civilainsInjuryDetails) {
-        List<Injury> updatedInjuryDetails = new ArrayList<>();
-        for (Injury injury : civilainsInjuryDetails) {
-            for (Injury injury1 : injuryList) {
-                if ((injury.getCivilianId() == injury1.getCivilianId()) && (injury.getOfficerId() == injury1.getOfficerId()) && ((injury.getInjuryOffCiv().equals(injury1.getInjuryOffCiv())))) {
-                    injury.setInjuryId(injury1.getInjuryId());
-                    injury.setInjuryOffCiv(injury1.getInjuryOffCiv());
-                    updatedInjuryDetails.add(injury);
-                }
-            }
-        }
-        return updatedInjuryDetails;
-    }
-
-    public List<Race> getUpdatedRaceDetails(List<Race> raceList, List<Race> civilainsRaceDetails) {
-        List<Race> updatedRaceDetails = new ArrayList<>();
-        for (Race race : civilainsRaceDetails) {
-            for (Race race1 : raceList) {
-                if ((race.getCivilainsId() == race1.getCivilainsId()) && (race.getOfficerId() == race1.getOfficerId()) && ((race.getRaceOf().equals(race1.getRaceOf())))) {
-                    race.setRaceId(race1.getRaceId());
-                    race.setRaceOf(race1.getRaceOf());
-                    updatedRaceDetails.add(race);
-                }
-            }
-        }
-        return updatedRaceDetails;
-    }
-
-    public List<ForceDetails> getUpdatedCivilianForceDetails(List<ForceDetails> forceDetailsWithForceIdList, List<ForceDetails> forceDetailsOfCiviliansList) {
-        List<ForceDetails> updatedCivilianForceDetails = new ArrayList<>();
-        for (ForceDetails details : forceDetailsWithForceIdList) {
-            for (ForceDetails details1 : forceDetailsOfCiviliansList) {
-                if ((details.getCivilianId() == details1.getCivilianId()) && (details.getOfficerId() == details1.getOfficerId()) && ((details.getForceOn().equals(details1.getForceOn())))) {
-                    details1.setForceId(details.getForceId());
-                    details1.setForceOn(details.getForceOn());
-                    updatedCivilianForceDetails.add(details1);
-                }
-            }
-        }
-        return updatedCivilianForceDetails;
-    }
-
-    public List<ForceDetails> getUpdatedOfficersForceDetails(List<ForceDetails> forceDetailsWithForceIdList, List<ForceDetails> forceDetailsOfCiviliansList) {
-        List<ForceDetails> updatedOfficersForceDetails = new ArrayList<>();
-        for (ForceDetails details : forceDetailsWithForceIdList) {
-            for (ForceDetails details1 : forceDetailsOfCiviliansList) {
-                if ((details.getOfficerId() == details1.getOfficerId()) && (details.getCivilianId() == details1.getCivilianId()) && (details.getForceOn().equals(details1.getForceOn()))) {
-                    details1.setForceId(details.getForceId());
-                    details1.setForceOn(details.getForceOn());
-                    updatedOfficersForceDetails.add(details1);
-                }
-            }
-        }
-        return updatedOfficersForceDetails;
-    }
-
-    public List<Injury> getInjuryListForCiviliansInIncident(List<Integer> offCivList) {
-        List<Injury> injuryDetails = new ArrayList<>();
+    public List<InjuryType> getInjuryListForCiviliansInIncident(List<Integer> offCivList) {
+        List<InjuryType> injuryTypeDetails = new ArrayList<>();
         try {
             String inParams = offCivList.stream()
                     .map(Object::toString)
                     .collect(Collectors.joining(","));
-            injuryDetails = jdbcTemplate.query(String.format(incidentSql.GET_CIV_INJURY_LIST, inParams), new InjuryRowMapper());
+            injuryTypeDetails = jdbcTemplate.query(String.format(incidentSql.GET_CIV_INJURY_LIST, inParams), new InjuryTypeRowMapper());
         } catch (DataAccessException e) {
             e.printStackTrace();
         }
-        return injuryDetails;
+        return injuryTypeDetails;
+    }
+
+    public List<HawaiianPacificIslanderRace> getOffHawaiianRaceDetails(List<Integer> officerIds)
+    {
+        List<HawaiianPacificIslanderRace> hawaiianRaceList = new ArrayList<>();
+        try {
+            String inParams = officerIds.stream()
+                    .map(Object::toString)
+                    .collect(Collectors.joining(","));
+            hawaiianRaceList = jdbcTemplate.query(String.format(incidentSql.GET_OFF_HAWAIIAN_REACE_DETAILS, inParams), new HawaiianRaceRowMapper());
+        } catch (DataAccessException e) {
+            e.printStackTrace();
+        }
+        return hawaiianRaceList;
     }
 
     public List<HawaiianPacificIslanderRace> getCivHawaiianRaceDetails(List<Integer> civilianRaceIds) {
@@ -2003,6 +1631,34 @@ public class IncidentDaoImpl implements IncidentDao {
         return asianRaceList;
     }
 
+    public List<AsianRace> getOffAsianRaceDetails(List<Integer> officerIds)
+    {
+        List<AsianRace> asianRaceList = new ArrayList<>();
+        try {
+            String inParams = officerIds.stream()
+                    .map(Object::toString)
+                    .collect(Collectors.joining(","));
+            asianRaceList = jdbcTemplate.query(String.format(incidentSql.GET_OFF_ASIAN_RACE_DETAILS, inParams), new AsianRaceRowMapper());
+        } catch (DataAccessException e) {
+            e.printStackTrace();
+        }
+        return asianRaceList;
+    }
+
+    public List<PrimaryRace> getOffPrimaryRaceDetails(List<Integer> officerIds)
+    {
+        List<PrimaryRace> primaryRaceList = new ArrayList<>();
+        try {
+            String inParams = officerIds.stream()
+                    .map(Object::toString)
+                    .collect(Collectors.joining(","));
+            primaryRaceList = jdbcTemplate.query(String.format(incidentSql.GET_OFF_PRIMARY_RACE_DETAILS, inParams), new PrimaryRaceRowMapper());
+        } catch (DataAccessException e) {
+            e.printStackTrace();
+        }
+        return primaryRaceList;
+    }
+
     public List<PrimaryRace> getCivPrimaryRaceDetails(List<Integer> civilianRaceIds) {
         List<PrimaryRace> primaryRaceList = new ArrayList<>();
         try {
@@ -2027,102 +1683,6 @@ public class IncidentDaoImpl implements IncidentDao {
             e.printStackTrace();
         }
         return injuryTypeDetails;
-    }
-
-    public List<Injury> getInjuryListForOfficersInIncident(List<Integer> offCivList) {
-        List<Injury> injuryDetails = new ArrayList<>();
-        try {
-            String inParams = offCivList.stream()
-                    .map(Object::toString)
-                    .collect(Collectors.joining(","));
-            injuryDetails = jdbcTemplate.query(String.format(incidentSql.GET_OFF_INJURY_DETAILS, inParams), new InjuryRowMapper());
-        } catch (DataAccessException e) {
-            e.printStackTrace();
-        }
-        return injuryDetails;
-    }
-
-    public List<Injury> getInjuryListWithInjuryId(List<Integer> offCivList) {
-        List<Injury> injuryDetails = new ArrayList<>();
-        try {
-            String inParams = offCivList.stream()
-                    .map(Object::toString)
-                    .collect(Collectors.joining(","));
-            injuryDetails = jdbcTemplate.query(String.format(incidentSql.GET_CIV_INJURY_DETAILS, inParams), new InjuryRowMapper());
-        } catch (DataAccessException e) {
-            e.printStackTrace();
-        }
-        return injuryDetails;
-    }
-
-    public List<Race> getUpdatedOfficersRaceDetailsWithRaceId(List<Integer> officerIds) {
-        List<Race> raceDetails = new ArrayList<>();
-        try {
-            String inParams = officerIds.stream()
-                    .map(Object::toString)
-                    .collect(Collectors.joining(","));
-            raceDetails = jdbcTemplate.query(String.format(incidentSql.GET_OFF_RACE_DETAILS, inParams), new RaceRowMapper());
-            return raceDetails;
-        } catch (DataAccessException e) {
-            e.printStackTrace();
-        }
-        return raceDetails;
-    }
-
-    public List<Race> getUpdatedCivilianRaceDetailsWithRaceId(List<Integer> offCivList) {
-        List<Race> raceDetails = new ArrayList<>();
-        try {
-            String inParams = offCivList.stream()
-                    .map(Object::toString)
-                    .collect(Collectors.joining(","));
-            raceDetails = jdbcTemplate.query(String.format(incidentSql.GET_CIV_RACE_DETAILS, inParams), new RaceRowMapper());
-        } catch (DataAccessException e) {
-            e.printStackTrace();
-        }
-        return raceDetails;
-    }
-
-    public List<Race> getUpdatedRaceDetailsWithRaceId(List<Integer> offCivList) {
-        List<Race> raceDetails = new ArrayList<>();
-        try {
-            String inParams = offCivList.stream()
-                    .map(Object::toString)
-                    .collect(Collectors.joining(","));
-            raceDetails = jdbcTemplate.query(String.format(incidentSql.GET_RACE_DETAILS, inParams), new RaceRowMapper());
-        } catch (DataAccessException e) {
-            e.printStackTrace();
-        }
-        return raceDetails;
-    }
-
-    public List<ForceDetails> getUpdatedForceDetailsWithForceId(List<Integer> offCivList) {
-        List<ForceDetails> forceDetailsList = new ArrayList<>();
-        try {
-            String inParams = offCivList.stream()
-                    .map(Object::toString)
-                    .collect(Collectors.joining(","));
-            forceDetailsList = jdbcTemplate.query(String.format(incidentSql.GET_FORCE_DETAILS, inParams), new ForceDetailsRowMapper());
-        } catch (DataAccessException e) {
-            e.printStackTrace();
-        }
-        return forceDetailsList;
-    }
-
-    public List<Integer> getCivIds(List<OfficerCivilians> officerCivilians) {
-        Set<Integer> offCivSet = new HashSet<>();
-        for (OfficerCivilians forceDetailsList : officerCivilians) {
-            offCivSet.add(forceDetailsList.getCivilianId());
-        }
-        return offCivSet.stream().collect(Collectors.toList());
-    }
-
-    public List<Integer> getOffIds(List<OfficerCivilians> officerCivilians) {
-        Set<Integer> offCivSet = new HashSet<>();
-        for (OfficerCivilians forceDetailsList : officerCivilians)
-        {
-            offCivSet.add(forceDetailsList.getOfficerId());
-        }
-        return offCivSet.stream().collect(Collectors.toList());
     }
 
     public List<Integer> getUpdatedForceDetails(List<OfficerCivilians> officerCivilians) {
@@ -2161,25 +1721,18 @@ public class IncidentDaoImpl implements IncidentDao {
     }
 
 
-    public List<Integer> getOfficerIdsForIncident(List<Officers> officersUpdateWithInuryList, List<Civilians> civiliansUpdateWithInuryList) {
-        List<Integer> officerIds = new ArrayList<>();
-        for (Officers officers : officersUpdateWithInuryList) {
-            officerIds.add(officers.getOfficerId());
-        }
-        return officerIds;
-    }
-
-    public int[] submittedForceTypeForIncident(List<IncidentForceType> incidentForceTypeList) {
+    public int[] submittedForceTypeForIncident(List<ForceType> forceTypeList) {
         return this.jdbcTemplate.batchUpdate(incidentSql.INSERT_INCIDENT_FORCE_TYPE_DETAILS, new BatchPreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
-                preparedStatement.setInt(1, incidentForceTypeList.get(i).getForceId());
-                preparedStatement.setString(2, incidentForceTypeList.get(i).getForceType());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
+                preparedStatement.setString(1, forceTypeList.get(i).getForceType());
+                preparedStatement.setInt(2, forceTypeList.get(i).getCivilianId());
+                preparedStatement.setInt(3, forceTypeList.get(i).getOfficerId());
+                preparedStatement.setString(4, forceTypeList.get(i).getForceOn());
             }
             @Override
             public int getBatchSize() {
-                return incidentForceTypeList.size();
+                return forceTypeList.size();
             }
         });
     }
@@ -2189,8 +1742,9 @@ public class IncidentDaoImpl implements IncidentDao {
             @Override
             public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
                 preparedStatement.setString(1, incidentHawaiianRaceDetails.get(i).getHawaiianRace());
-                preparedStatement.setInt(2, incidentHawaiianRaceDetails.get(i).getRaceId());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
+                preparedStatement.setInt(2, incidentHawaiianRaceDetails.get(i).getCivilianId());
+                preparedStatement.setInt(3, incidentHawaiianRaceDetails.get(i).getOfficerId());
+                preparedStatement.setString(4, incidentHawaiianRaceDetails.get(i).getHawaiianRaceOf());
             }
             @Override
             public int getBatchSize() {
@@ -2204,8 +1758,9 @@ public class IncidentDaoImpl implements IncidentDao {
             @Override
             public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
                 preparedStatement.setString(1, injuryTypeList.get(i).getInjuryType());
-                preparedStatement.setInt(2, injuryTypeList.get(i).getInjuryId());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
+                preparedStatement.setInt(2, injuryTypeList.get(i).getCivilianId());
+                preparedStatement.setInt(3, injuryTypeList.get(i).getOfficerId());
+                preparedStatement.setString(4, injuryTypeList.get(i).getInjutyTypeOn());
             }
             @Override
             public int getBatchSize() {
@@ -2219,8 +1774,9 @@ public class IncidentDaoImpl implements IncidentDao {
             @Override
             public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
                 preparedStatement.setString(1, incidentAsianRaceDetails.get(i).getAsianRace());
-                preparedStatement.setInt(2, incidentAsianRaceDetails.get(i).getRaceId());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
+                preparedStatement.setInt(2, incidentAsianRaceDetails.get(i).getCivilianId());
+                preparedStatement.setInt(3, incidentAsianRaceDetails.get(i).getOfficerId());
+                preparedStatement.setString(4, incidentAsianRaceDetails.get(i).getAsianRaceOf());
             }
             @Override
             public int getBatchSize() {
@@ -2235,7 +1791,6 @@ public class IncidentDaoImpl implements IncidentDao {
             public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
                 preparedStatement.setString(1, resistanceTypeList.get(i).getResistanceType());
                 preparedStatement.setInt(2, resistanceTypeList.get(i).getCivilianId());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
             }
             @Override
             public int getBatchSize() {
@@ -2250,7 +1805,6 @@ public class IncidentDaoImpl implements IncidentDao {
             public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
                 preparedStatement.setString(1, confirmedWeaponTypeList.get(i).getConfirmedWeapon());
                 preparedStatement.setInt(2, confirmedWeaponTypeList.get(i).getCivilianId());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
             }
             @Override
             public int getBatchSize() {
@@ -2259,33 +1813,17 @@ public class IncidentDaoImpl implements IncidentDao {
         });
     }
 
+
     public int[] submitperceivedWeaponTypeList(List<PerceivedWeaponType> perceivedWeaponTypeList) {
         return this.jdbcTemplate.batchUpdate(incidentSql.INSERT_PERCEIVED_WEAPON_TYPE_DETAILS, new BatchPreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
                 preparedStatement.setString(1, perceivedWeaponTypeList.get(i).getPerceivedWeapon());
                 preparedStatement.setInt(2, perceivedWeaponTypeList.get(i).getCivilianId());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
             }
             @Override
             public int getBatchSize() {
                 return perceivedWeaponTypeList.size();
-            }
-        });
-    }
-
-
-    public int[] submittInjuryTypeDetailsOfIncident(List<InjuryType> incidentInjuryTypeDetails) {
-        return this.jdbcTemplate.batchUpdate(incidentSql.INSERT_INCIDENT_INJURY_TYPE_DETAILS, new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
-                preparedStatement.setString(1, incidentInjuryTypeDetails.get(i).getInjuryType());
-                preparedStatement.setInt(2, incidentInjuryTypeDetails.get(i).getInjuryId());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
-            }
-            @Override
-            public int getBatchSize() {
-                return incidentInjuryTypeDetails.size();
             }
         });
     }
@@ -2295,8 +1833,9 @@ public class IncidentDaoImpl implements IncidentDao {
             @Override
             public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
                 preparedStatement.setString(1, incidentPrimaryRaceDetails.get(i).getPrimaryRace());
-                preparedStatement.setInt(2, incidentPrimaryRaceDetails.get(i).getRaceId());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
+                preparedStatement.setInt(2, incidentPrimaryRaceDetails.get(i).getCivilianId());
+                preparedStatement.setInt(3, incidentPrimaryRaceDetails.get(i).getOfficerId());
+                preparedStatement.setString(4, incidentPrimaryRaceDetails.get(i).getPrimaryRaceOf());
             }
             @Override
             public int getBatchSize() {
@@ -2305,71 +1844,23 @@ public class IncidentDaoImpl implements IncidentDao {
         });
     }
 
-    public int[] submittedForceLocationsForIncident(List<IncidentForceLocation> incidentForceLocationList) {
+    public int[] submitIncidentForceLocationDetails(List<ForceLocation> forceLocationList)
+    {
         return this.jdbcTemplate.batchUpdate(incidentSql.INSERT_INCIDENT_FORCE_LOCATION_DETAILS, new BatchPreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
-                preparedStatement.setInt(1, incidentForceLocationList.get(i).getForceId());
-                preparedStatement.setString(2, incidentForceLocationList.get(i).getForceLocation());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
+                preparedStatement.setString(1, forceLocationList.get(i).getForceLocation());
+                preparedStatement.setInt(2, forceLocationList.get(i).getCivilianId());
+                preparedStatement.setInt(3, forceLocationList.get(i).getOfficerId());
+                preparedStatement.setString(4, forceLocationList.get(i).getForceOn());
             }
             @Override
             public int getBatchSize() {
-                return incidentForceLocationList.size();
+                return forceLocationList.size();
             }
         });
     }
 
-    public int[] submitIncidentInjuryDetails(List<Injury> civilainsInjuryDetails) {
-        return this.jdbcTemplate.batchUpdate(incidentSql.INSERT_INCIDENT_INJURIES, new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
-                preparedStatement.setInt(1, civilainsInjuryDetails.get(i).getInjuryLevel());
-                preparedStatement.setString(2, civilainsInjuryDetails.get(i).getInjuryMedicalAid());
-                preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
-                preparedStatement.setInt(4, civilainsInjuryDetails.get(i).getCivilianId());
-                preparedStatement.setInt(5, civilainsInjuryDetails.get(i).getOfficerId());
-                preparedStatement.setString(6, civilainsInjuryDetails.get(i).getInjuryOffCiv());
-            }
-            @Override
-            public int getBatchSize() {
-                return civilainsInjuryDetails.size();
-            }
-        });
-    }
-
-
-    public int[] submitIncidentRaceDetails(List<Race> civilainsRaceDetails) {
-        return this.jdbcTemplate.batchUpdate(incidentSql.INSERT_INCIDENT_RACE_DETAILS, new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
-                preparedStatement.setInt(1, civilainsRaceDetails.get(i).getOfficerId());
-                preparedStatement.setInt(2, civilainsRaceDetails.get(i).getCivilainsId());
-                preparedStatement.setString(3, civilainsRaceDetails.get(i).getRaceOf());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
-            }
-            @Override
-            public int getBatchSize() {
-                return civilainsRaceDetails.size();
-            }
-        });
-    }
-
-    public int[] submitIncidentForceDetails(List<ForceDetails> forceDetailsOfCiviliansList) {
-        return this.jdbcTemplate.batchUpdate(incidentSql.INSERT_INCIDENT_FORCE_DETAILS, new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement preparedStatement, int i) throws SQLException {
-                preparedStatement.setInt(1, forceDetailsOfCiviliansList.get(i).getCivilianId());
-                preparedStatement.setInt(2, forceDetailsOfCiviliansList.get(i).getOfficerId());
-                preparedStatement.setString(3, forceDetailsOfCiviliansList.get(i).getForceOn());
-                //preparedStatement.setDate(3, new java.sql.Date(System.currentTimeMillis()));
-            }
-            @Override
-            public int getBatchSize() {
-                return forceDetailsOfCiviliansList.size();
-            }
-        });
-    }
 
     public int[] submitOfficersCiviliansIds(List<OfficerCivilians> officerCivilians) {
         return this.jdbcTemplate.batchUpdate(incidentSql.INSERT_OFFICER_CIVILIAN_IDS, new BatchPreparedStatementSetter() {
@@ -2418,7 +1909,6 @@ public class IncidentDaoImpl implements IncidentDao {
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 ps.setInt(1, officersList.get(i).getOfficerOrder());
                 ps.setString(2, officersList.get(i).isOfficerUsedForce() ? "Y" : "N");
-                //ps.setString(3, officersList.get(i).getReasonForOfficerUsedForce());
                 ps.setInt(3, officersList.get(i).getAge());
                 ps.setString(4, officersList.get(i).getGender().name());
                 ps.setString(5, officersList.get(i).isInjured() ? "Y" : "N");
@@ -2463,7 +1953,7 @@ public class IncidentDaoImpl implements IncidentDao {
         });
     }
 
-    public int[] submitIncidentAddress(List<IncidentLocation> incidentLocations, int incidentId) {
+    public int[] submitIncidentAddress(List<Address> incidentLocations, int incidentId) {
         return this.jdbcTemplate.batchUpdate(incidentSql.INSERT_INCIDENT_ADDRESS, new BatchPreparedStatementSetter() {
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 ps.setInt(1, incidentLocations.get(i).getIncidentAddressSequence());

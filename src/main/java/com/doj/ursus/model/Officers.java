@@ -1,32 +1,122 @@
 package com.doj.ursus.model;
 
 import com.doj.ursus.util.Gender;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
+import javax.xml.bind.annotation.*;
 import java.sql.Date;
 import java.util.List;
 
+@XmlRootElement(name = "officer")
+@XmlAccessorType(XmlAccessType.FIELD)
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class Officers {
 
     private int officerId;
     private String agency;
     private int officerOrder; // number
     private List<Integer> engagedCivilians;
-    //private List<Integer> involvedCivilianIds;
     private boolean isOfficerUsedForce;
+    @XmlElementWrapper(name = "reasonForOfficerUsedForce")
+    @XmlElement(name = "reasonForOfficerUsedForce")
     private List<String> reasonForOfficerUsedForce;
     private int age;
     private Gender gender;
-    private Race raceDetails;
     private boolean isInjured;
-    private Injury injuryDetails;
     private boolean isInjuryFromPreExistingCondition;
     private boolean isReceivedForce;
-    private ForceDetails forceDetails;
     private boolean isOfficerAssaulted;
     private boolean isOnDuty;
     private String dress;
     private Date changeDate;
+    @JsonIgnore
     private int incidentId;
+
+    @XmlElementWrapper(name = "primaryRaceTypes")
+    @XmlElement(name = "primaryRaceType")
+    private List<String> primaryRaceType;
+    @XmlElementWrapper(name = "asianRaceTypes")
+    @XmlElement(name = "asianRaceType")
+    private List<String> asianRaceType;
+    @XmlElementWrapper(name = "hawaiianRaceTypes")
+    @XmlElement(name = "hawaiianRaceType")
+    private List<String> hawaiianRaceType;
+    private int injuryLevel;
+    @XmlElementWrapper(name = "injuryTypes")
+    @XmlElement(name = "injuryType")
+    private List<String> injuryType;
+    private String injuryMedicalAid;
+    @XmlElementWrapper(name = "forceLocations")
+    @XmlElement(name = "forceLocation")
+    private List<String> forceLocation;
+    @XmlElementWrapper(name = "forceTypes")
+    @XmlElement(name = "forceType")
+    private List<String> forceType;
+
+    public List<String> getPrimaryRaceType() {
+        return primaryRaceType;
+    }
+
+    public void setPrimaryRaceType(List<String> primaryRaceType) {
+        this.primaryRaceType = primaryRaceType;
+    }
+
+    public List<String> getAsianRaceType() {
+        return asianRaceType;
+    }
+
+    public void setAsianRaceType(List<String> asianRaceType) {
+        this.asianRaceType = asianRaceType;
+    }
+
+    public List<String> getHawaiianRaceType() {
+        return hawaiianRaceType;
+    }
+
+    public void setHawaiianRaceType(List<String> hawaiianRaceType) {
+        this.hawaiianRaceType = hawaiianRaceType;
+    }
+
+    public int getInjuryLevel() {
+        return injuryLevel;
+    }
+
+    public void setInjuryLevel(int injuryLevel) {
+        this.injuryLevel = injuryLevel;
+    }
+
+    public List<String> getInjuryType() {
+        return injuryType;
+    }
+
+    public void setInjuryType(List<String> injuryType) {
+        this.injuryType = injuryType;
+    }
+
+    public String getInjuryMedicalAid() {
+        return injuryMedicalAid;
+    }
+
+    public void setInjuryMedicalAid(String injuryMedicalAid) {
+        this.injuryMedicalAid = injuryMedicalAid;
+    }
+
+    public List<String> getForceLocation() {
+        return forceLocation;
+    }
+
+    public void setForceLocation(List<String> forceLocation) {
+        this.forceLocation = forceLocation;
+    }
+
+    public List<String> getForceType() {
+        return forceType;
+    }
+
+    public void setForceType(List<String> forceType) {
+        this.forceType = forceType;
+    }
 
     public List<Integer> getEngagedCivilians() {
         return engagedCivilians;
@@ -108,28 +198,12 @@ public class Officers {
         this.gender = gender;
     }
 
-    public Race getRaceDetails() {
-        return raceDetails;
-    }
-
-    public void setRaceDetails(Race raceDetails) {
-        this.raceDetails = raceDetails;
-    }
-
     public boolean isInjured() {
         return isInjured;
     }
 
     public void setInjured(boolean injured) {
         isInjured = injured;
-    }
-
-    public Injury getInjuryDetails() {
-        return injuryDetails;
-    }
-
-    public void setInjuryDetails(Injury injuryDetails) {
-        this.injuryDetails = injuryDetails;
     }
 
     public boolean isInjuryFromPreExistingCondition() {
@@ -146,14 +220,6 @@ public class Officers {
 
     public void setReceivedForce(boolean receivedForce) {
         isReceivedForce = receivedForce;
-    }
-
-    public ForceDetails getForceDetails() {
-        return forceDetails;
-    }
-
-    public void setForceDetails(ForceDetails forceDetails) {
-        this.forceDetails = forceDetails;
     }
 
     public boolean isOfficerAssaulted() {
@@ -191,17 +257,22 @@ public class Officers {
                 ", reasonForOfficerUsedForce=" + reasonForOfficerUsedForce +
                 ", age=" + age +
                 ", gender=" + gender +
-                ", raceDetails=" + raceDetails +
                 ", isInjured=" + isInjured +
-                ", injuryDetails=" + injuryDetails +
                 ", isInjuryFromPreExistingCondition=" + isInjuryFromPreExistingCondition +
                 ", isReceivedForce=" + isReceivedForce +
-                ", forceDetails=" + forceDetails +
                 ", isOfficerAssaulted=" + isOfficerAssaulted +
                 ", isOnDuty=" + isOnDuty +
                 ", dress='" + dress + '\'' +
                 ", changeDate=" + changeDate +
                 ", incidentId=" + incidentId +
+                ", primaryRaceType=" + primaryRaceType +
+                ", asianRaceType=" + asianRaceType +
+                ", hawaiianRaceType=" + hawaiianRaceType +
+                ", injuryLevel=" + injuryLevel +
+                ", injuryType=" + injuryType +
+                ", injuryMedicalAid='" + injuryMedicalAid + '\'' +
+                ", forceLocation=" + forceLocation +
+                ", forceType=" + forceType +
                 '}';
     }
 }

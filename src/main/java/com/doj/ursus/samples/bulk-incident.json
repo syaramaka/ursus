@@ -1,0 +1,233 @@
+{
+  "incident": [
+    {
+      "screener": {
+        "isMultipleAgencies": "Y",
+        "isPrimaryAgency": "N",
+        "primaryAgencyName": "SAPD",
+        "isDischargeOfFirearm": "Y",
+        "isOfficerUsedForce": "Y",
+        "isCivilianSeriouslyInjured": "Y",
+        "isCivilianUsedForce": "Y",
+        "isOfficerSeriouslyInjured": "Y"
+      },
+      "incidentId": 269,
+      "primaryAgency": "DOJ",
+      "isArrestMade": "Y",
+      "isCrimeReportFiled": "Y",
+      "incidentReason": "Local Fight",
+      "agencyORI": "CA384000",
+      "officersCount": 2,
+      "civiliansCount": 4,
+      "scenario": "local fight..two offiers, 4 civilains",
+      "caseNumber": "1234567",
+      "custodyEventOptions": "Booked-No Charge filed",
+      "addresses": [
+        {
+          "incidentAddressSequence": 1,
+          "isOnK12Campus": "Y",
+          "streetNo": "4500",
+          "streetName": "Truxel Rd",
+          "city": "Sacramento",
+          "state": "CA",
+          "county": "Natomas",
+          "zip": "95834",
+          "longitude": -121.4944,
+          "latitude": 38.581573,
+          "locationDetails": "4500 Truxel Rd"
+        },
+        {
+          "incidentAddressSequence": 2,
+          "isOnK12Campus": "Y",
+          "streetNo": "4500",
+          "streetName": "Sanator Ave",
+          "city": "Sacramento",
+          "state": "CA",
+          "county": "Northgate Blvd",
+          "zip": "95833",
+          "longitude": -121.4944,
+          "latitude": 38.581573,
+          "locationDetails": "466, Sanator Ave"
+        }
+      ],
+      "civilians": [
+        {
+          "civilianId": 473,
+          "civilianNumber": 1,
+          "custodyStatus": " In Custody (WI 5150)",
+          "perceivedWeaponType": [
+            "Other Dangerous weapon",
+            "Unknown"
+          ],
+          "engagedOfficers": [
+            1
+          ],
+          "k12Type": "Student",
+          "confirmedArmedWeapon": [
+            "Firearm",
+            "Knife Blade Stabbing"
+          ],
+          "fireArms": [
+            "Shotgun",
+            "Knife"
+          ],
+          "resistanceType": [
+            " Assaultive",
+            "Fleeing"
+          ],
+          "mentalStatus": "Signs of drug impairment ",
+          "age": 36,
+          "gender": "Male",
+          "race": "American-Indian",
+          "highestCharge": "TEST Punishment",
+          "forceLocation": [
+            "Head",
+            "Arms/hands"
+          ],
+          "forceType": [
+            "Impact projectile",
+            "Threat of firearm"
+          ],
+          "injuryLevel": 1,
+          "injuryType": [
+            "Unconscious",
+            "Internal injury"
+          ],
+          "injuryMedicalAid": "2",
+          "primaryRaceType": [
+            "black",
+            "american_indian"
+          ],
+          "perceivedArmed": true,
+          "assaultedOfficer": true,
+          "orderOfForceSpecified": true,
+          "injured": true
+        },
+        {
+          "civilianId": 474,
+          "civilianNumber": 2,
+          "custodyStatus": " In Custody (WI 5150)",
+          "perceivedWeaponType": [
+            "Knife Blade Stabbing",
+            "Firearm"
+          ],
+          "engagedOfficers": [
+            2
+          ],
+          "k12Type": "Student",
+          "confirmedArmedWeapon": [
+            "Firearm",
+            "Other Dangerous weapon"
+          ],
+          "fireArms": [
+            "Rifle",
+            "Handgun"
+          ],
+          "resistanceType": [
+            " Active resistance",
+            " Life-threatening "
+          ],
+          "mentalStatus": "Signs of drug impairment ",
+          "age": 36,
+          "gender": "Male",
+          "race": "American-Indian",
+          "highestCharge": "TEST Punishment",
+          "forceLocation": [
+            " Rear upper torso/back",
+            " Front lower torso/abdomen"
+          ],
+          "forceType": [
+            " Blunt / impact weapon",
+            " Impact projectile"
+          ],
+          "injuryLevel": 2,
+          "injuryType": [
+            "Abrasion/Laceration",
+            "Bone fracture"
+          ],
+          "injuryMedicalAid": "2",
+          "primaryRaceType": [
+            "Asian",
+            "White"
+          ],
+          "asianRaceType": [
+            "Filipino",
+            "cambodian"
+          ],
+          "perceivedArmed": true,
+          "assaultedOfficer": true,
+          "orderOfForceSpecified": true,
+          "confirmedArmed": true,
+          "injured": true
+        }
+      ],
+      "officers": [
+        {
+          "officerId": 489,
+          "agency": "Police Department of Sacramento",
+          "officerOrder": 1,
+          "engagedCivilians": [
+            1
+          ],
+          "reasonForOfficerUsedForce": [
+            "To overcome resistance",
+            "To prevent escape"
+          ],
+          "age": 35,
+          "gender": "Male",
+          "dress": "Patrol Uniform",
+          "primaryRaceType": [
+            " American Indian or Alaska Native"
+          ],
+          "injuryLevel": 1,
+          "injuryType": [
+            "Gunshot wound",
+            "Bone fracture"
+          ],
+          "injuryMedicalAid": "1",
+          "forceLocation": [
+            "Arms/hands"
+          ],
+          "forceType": [
+            "Threat of firearm"
+          ],
+          "officerUsedForce": true,
+          "officerAssaulted": true,
+          "injured": true,
+          "onDuty": true,
+          "injuryFromPreExistingCondition": true
+        },
+        {
+          "officerId": 490,
+          "agency": "Police Department of Natomas",
+          "officerOrder": 2,
+          "engagedCivilians": [
+            2
+          ],
+          "reasonForOfficerUsedForce": [
+            "Defense of third party",
+            "To effect arrest/take into custody"
+          ],
+          "age": 35,
+          "gender": "Male",
+          "dress": "Patrol Uniform",
+          "primaryRaceType": [
+            "White"
+          ],
+          "hawaiianRaceType": [
+            "Hawaiian"
+          ],
+          "injuryLevel": 1,
+          "injuryType": [
+            "Internal injury"
+          ],
+          "injuryMedicalAid": "1",
+          "officerUsedForce": true,
+          "officerAssaulted": true,
+          "onDuty": true,
+          "injuryFromPreExistingCondition": true
+        }
+      ]
+    }
+  ]
+}

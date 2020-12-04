@@ -2,9 +2,14 @@ package com.doj.ursus.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-@JsonInclude(JsonInclude.Include.NON_DEFAULT)
-public class IncidentLocation {
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 
+@XmlRootElement(name = "address")
+@XmlAccessorType(XmlAccessType.FIELD)
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
+public class Address {
     private int incidentAddressSequence;
     private String isOnK12Campus;
     private String streetNo;

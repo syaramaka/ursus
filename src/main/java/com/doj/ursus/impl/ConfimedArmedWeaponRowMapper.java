@@ -1,5 +1,6 @@
 package com.doj.ursus.impl;
 
+import com.doj.ursus.model.ConfimedArmedWeapon;
 import org.springframework.jdbc.core.RowMapper;
 
 import java.sql.ResultSet;

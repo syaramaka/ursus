@@ -1,12 +1,18 @@
 package com.doj.ursus.model;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 /*
 screener pojo, map to screener table
  */
+@JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class Screener {
+
     private int screenerId;
+
     private String isMultipleAgencies;
     private String isPrimaryAgency;
+    private String primaryAgencyName;
     /*
     if isPrimaryAgency is NO, then user has to enter
     primary agency name and click Submit to DOJ
@@ -19,6 +25,14 @@ public class Screener {
     private String isCivilianUsedForce;
     private String isOfficerSeriouslyInjured;
     private String isIncident;
+
+    public String getPrimaryAgencyName() {
+        return primaryAgencyName;
+    }
+
+    public void setPrimaryAgencyName(String primaryAgencyName) {
+        this.primaryAgencyName = primaryAgencyName;
+    }
 
     public int getScreenerId() {
         return screenerId;
@@ -98,6 +112,7 @@ public class Screener {
                 "screenerId=" + screenerId +
                 ", isMultipleAgencies='" + isMultipleAgencies + '\'' +
                 ", isPrimaryAgency='" + isPrimaryAgency + '\'' +
+                ", primaryAgencyName='" + primaryAgencyName + '\'' +
                 ", isDischargeOfFirearm='" + isDischargeOfFirearm + '\'' +
                 ", isOfficerUsedForce='" + isOfficerUsedForce + '\'' +
                 ", isCivilianSeriouslyInjured='" + isCivilianSeriouslyInjured + '\'' +

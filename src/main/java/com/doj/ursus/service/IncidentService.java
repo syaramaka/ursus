@@ -1,10 +1,13 @@
 package com.doj.ursus.service;
 
-import com.doj.ursus.model.IncidentCoreDetails;
+import com.doj.ursus.model.Incident;
+import com.doj.ursus.model.Incidents;
 
 public interface IncidentService {
 
-    public IncidentCoreDetails createIncident(IncidentCoreDetails details);
+    public Incident createIncident(Incident details);
 
-    public IncidentCoreDetails getIncidentDetails(int incidentId);
+    public Incident getIncidentDetails(int incidentId);
+
+    public Incidents createBulkIncidents(Incidents incidents);
 }

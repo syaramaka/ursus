@@ -1,19 +1,14 @@
 package com.doj.ursus.controller;
 
 import com.doj.ursus.impl.ScreenerDaoImpl;
-import com.doj.ursus.impl.UserDaoImpl;
 import com.doj.ursus.model.Screener;
-import com.doj.ursus.model.User;
 import com.doj.ursus.service.ScreenerService;
-import com.doj.ursus.service.UserService;
 import com.doj.ursus.util.ScreenTestData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /*
 screener class
@@ -30,7 +25,7 @@ public class ScreenerController {
     @Autowired
     ScreenTestData screenTestData;
 
-    private final Logger logger = LoggerFactory.getLogger(UserController.class);
+    private final Logger logger = LoggerFactory.getLogger(ScreenerController.class);
 
     @GetMapping(value = "/incident/screener")
     public Screener createFileIncident(Screener screener) {

@@ -5,33 +5,26 @@ import org.springframework.stereotype.Component;
 @Component
 public class IncidentSql {
 
-    public final String GET_INCIDENT_FORCE_TYPE = "SELECT * FROM ursus.incident_force_type WHERE force_level_force_id IN (%s)";
-    public final String GET_INCIDENT_CIVILIANS_FORCE_TYPE = "SELECT * FROM ursus.incident_force_type WHERE force_level_force_id IN (%s)";
-    public final String GET_OFFICERS_FORCE_LOCATION_DETAILS = "SELECT * FROM ursus.incident_force_level WHERE force_level_force_id IN (%s)";
-    public final String GET_INCIDENT_CIVILIANS_FORCE_LOCATION = "SELECT * FROM ursus.incident_force_level WHERE force_level_force_id IN (%s)";
-    public final String GET_OFFICERS_FORCE_DETAILS = "SELECT * FROM ursus.incident_force WHERE officer_details_officer_id IN (%s) and force_on='O'";
+    public final String GET_INCIDENT_CIVILIANS_FORCE_TYPE = "SELECT * FROM ursus.incident_force_type WHERE civilian_details_civilian_id IN (%s) and force_type_on='C'";
+    public final String GET_INCIDENT_OFF_FORCE_TYPE = "SELECT * FROM ursus.incident_force_type WHERE officer_details_officer_id IN (%s) and force_type_on='O'";
+    public final String GET_OFFICERS_FORCE_LOCATION_DETAILS = "SELECT * FROM ursus.incident_force_level WHERE officer_details_officer_id IN (%s) and force_level_on='O'";
+    public final String GET_INCIDENT_CIVILIANS_FORCE_LOCATION = "SELECT * FROM ursus.incident_force_level WHERE civilian_details_civilian_id IN (%s) and force_level_on='C'";
     public final String GET_CIVILIANS_RESISTANCE_TYPE = "SELECT * FROM ursus.incident_resistance_type WHERE civilian_details_civilian_id IN (%s)";
     public final String GET_CIV_PERCEIVE_WPN_TYPE = "SELECT * FROM ursus.incident_perceived_weapon_type WHERE civilian_details_civilian_id IN (%s)";
     public final String GET_CIV_CONF_ARMED_WPN = "SELECT * FROM ursus.incident_confirmed_armed_weapon WHERE civilian_details_civilian_id IN (%s)";
-    public final String GET_CIV_FORCE_DETAILS = "SELECT * FROM ursus.incident_force WHERE civilian_details_civilian_id IN (%s) and force_on='C'";
     public final String GET_CIV_FIRE_ARMED_LIST = "SELECT * FROM ursus.firearm_type WHERE civilian_details_civilian_id IN (%s)";
     public final String GET_INCIDENT_LOCATION = "select * from ursus.incident_addresses where incident_incident_id=?";
     public final String GET_INCIDENT_CORE_DETAILS = "select * from ursus.incident where incident_id=?";
     public final String GET_INCIDENT_OFFICERS = "SELECT * FROM ursus.officer_details where incident_incident_id=?";
     public final String GET_INCIDENT_CIV = "SELECT * FROM ursus.civilian_details where incident_incident_id=?";
-    public final String GET_CIV_IDS = "SELECT civilian_id FROM ursus.civilian_details where incident_incident_id=?";
-    public final String GET_OFF_IDS = "SELECT officer_id FROM ursus.officer_details where incident_incident_id=?";
     public final String GET_CIV_INJURY_LIST = "SELECT * FROM ursus.incident_injury WHERE civilian_details_civilian_id IN (%s) and injury_civ_off='C'";
-    public final String GET_HAWAIIAN_REACE_DETAILS = "SELECT * FROM ursus.incident_race_hawaiian_race WHERE race_id IN (%s)";
-    public final String GET_ASIAN_RACE_DETAILS = "SELECT * FROM ursus.incident_race_asian_race WHERE race_id IN (%s)";
-    public final String GET_PRIMARY_RACE_DETAILS = "SELECT * FROM ursus.incident_race_primary_race WHERE race_id IN (%s)";
-    public final String GET_OFF_INJURY_TYPE = "SELECT * FROM ursus.incident_injury_type WHERE injury_id IN (%s)";
-    public final String GET_OFF_INJURY_DETAILS = "SELECT * FROM ursus.incident_injury WHERE officer_details_officer_id IN (%s) and injury_civ_off='O'";
-    public final String GET_CIV_INJURY_DETAILS = "SELECT * FROM ursus.incident_injury WHERE civilian_details_civilian_id IN (%s)";
-    public final String GET_OFF_RACE_DETAILS = "SELECT * FROM ursus.incident_race WHERE officer_details_officer_id IN (%s) and race_of='O'";
-    public final String GET_CIV_RACE_DETAILS = "SELECT * FROM ursus.incident_race WHERE civilian_details_civilian_id IN (%s) and race_of='C'";
-    public final String GET_RACE_DETAILS = "SELECT * FROM ursus.incident_race WHERE civilian_details_civilian_id IN (%s)";
-    public final String GET_FORCE_DETAILS = "SELECT * FROM ursus.incident_force WHERE civilian_details_civilian_id IN (%s)";
+    public final String GET_HAWAIIAN_REACE_DETAILS = "SELECT * FROM ursus.incident_race_hawaiian_race WHERE civilian_details_civilian_id IN (%s) and hawaiian_race_for='C'";
+    public final String GET_OFF_HAWAIIAN_REACE_DETAILS = "SELECT * FROM ursus.incident_race_hawaiian_race WHERE officer_details_officer_id IN (%s) and hawaiian_race_for='O'";
+    public final String GET_ASIAN_RACE_DETAILS = "SELECT * FROM ursus.incident_race_asian_race WHERE civilian_details_civilian_id IN (%s) and asian_race_for='C'";
+    public final String GET_OFF_ASIAN_RACE_DETAILS = "SELECT * FROM ursus.incident_race_asian_race WHERE officer_details_officer_id IN (%s) and asian_race_for='O'";
+    public final String GET_PRIMARY_RACE_DETAILS = "SELECT * FROM ursus.incident_race_primary_race WHERE civilian_details_civilian_id IN (%s) and primary_race_for='C'";
+    public final String GET_OFF_PRIMARY_RACE_DETAILS = "SELECT * FROM ursus.incident_race_primary_race WHERE officer_details_officer_id IN (%s) and primary_race_for='O'";
+    public final String GET_OFF_INJURY_TYPE = "SELECT * FROM ursus.incident_injury_type WHERE officer_details_officer_id IN (%s) and injury_type_on='O'";
     public final String GET_OFF_CIV_FOR_CIV = "SELECT * FROM ursus.officer_civilian WHERE civilian_details_civilian_id IN (%s)";
     public final String GET_OFF_CIV_FOR_OFF = "SELECT * FROM ursus.officer_civilian WHERE officer_details_officer_id IN (%s)";
 
@@ -84,32 +77,32 @@ public class IncidentSql {
             "\tVALUES (?, ?, ?)";
 
     public final String INSERT_INCIDENT_FORCE_LOCATION_DETAILS = "INSERT INTO ursus.incident_force_level(\n" +
-            "\t force_level_force_id, force_location)\n" +
-            "\tVALUES (?, ?)";
+            "\t force_location, civilian_details_civilian_id, officer_details_officer_id, force_level_on)\n" +
+            "\tVALUES (?, ?, ?, ?)";
 
     public final String INSERT_INCIDENT_FORCE_TYPE_DETAILS = "INSERT INTO ursus.incident_force_type(\n" +
-            "\tforce_level_force_id, force_type)\n" +
-            "\tVALUES (?, ?)";
+            "\t force_type, civilian_details_civilian_id, officer_details_officer_id, force_type_on)\n" +
+            "\tVALUES (?, ?, ?, ?)";
 
     public final String INSERT_INCIDENT_RACE_DETAILS = "INSERT INTO ursus.incident_race(\n" +
             "\t officer_details_officer_id, civilian_details_civilian_id, race_of)\n" +
             "\tVALUES (?, ?, ?)";
 
     public final String INSERT_INCIDENT_PRIMARY_RACE_DETAILS = "INSERT INTO ursus.incident_race_primary_race(\n" +
-            "\t primary_race, race_id)\n" +
-            "\tVALUES (?, ?)";
+            "\t primary_race, civilian_details_civilian_id, officer_details_officer_id, primary_race_for)\n" +
+            "\tVALUES (?, ?, ?, ?)";
 
     public final String INSERT_INCIDENT_ASIAN_RACE_DETAILS = "INSERT INTO ursus.incident_race_asian_race(\n" +
-            "\t asian_race, race_id)\n" +
-            "\tVALUES (?, ?)";
+            "\t asian_race, civilian_details_civilian_id, officer_details_officer_id, asian_race_for)\n" +
+            "\tVALUES (?, ?, ?, ?)";
 
     public final String INSERT_INCIDENT_HAWAIIAN_RACE_DETAILS = "INSERT INTO ursus.incident_race_hawaiian_race(\n" +
-            "\t hawaiian_race, race_id)\n" +
-            "\tVALUES (?, ?)";
+            "\t hawaiian_race, civilian_details_civilian_id, officer_details_officer_id, hawaiian_race_for)\n" +
+            "\tVALUES (?, ?, ?, ?)";
 
     public final String INSERT_INCIDENT_INJURY_TYPE_DETAILS = "INSERT INTO ursus.incident_injury_type(\n" +
-            "\t injury_type, injury_id)\n" +
-            "\tVALUES (?, ?)";
+            "\t injury_type, civilian_details_civilian_id, officer_details_officer_id, injury_type_on)\n" +
+            "\tVALUES (?, ?, ?, ?)";
 
     public final String INSERT_PERCEIVED_WEAPON_TYPE_DETAILS = "INSERT INTO ursus.incident_perceived_weapon_type(\n" +
             "\t perceived_weapon, civilian_details_civilian_id)\n" +

@@ -14,7 +14,6 @@ public class OfficersRowMapper implements RowMapper {
         officers.setOfficerId(resultSet.getInt("officer_id"));
         officers.setOfficerOrder(resultSet.getInt("officer_sequence"));
         officers.setOfficerUsedForce(resultSet.getBoolean("officer_force_used"));
-        //officers.setReasonForOfficerUsedForce(resultSet.getString("office_force_reason"));
         officers.setAge(resultSet.getInt("officer_age"));
         officers.setGender(Gender.valueOf(resultSet.getString("officer_gender")));
         officers.setInjured(resultSet.getBoolean("officer_injured"));
